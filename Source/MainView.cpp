@@ -1,7 +1,9 @@
 #include "MainView.h"
+#include "MainComponent.h"
 
 namespace
 {
+/** Draws the usage hint below the controls. */
 void drawInstructions (juce::Graphics& g, juce::Rectangle<int> area)
 {
     g.setFont (juce::FontOptions().withHeight (14.0f));
@@ -13,14 +15,22 @@ void drawInstructions (juce::Graphics& g, juce::Rectangle<int> area)
 }
 } // namespace
 
-MainView::MainView()
+/** Lays out labels and combo box and forwards MIDI combo changes to `owner`. */
+MainView::MainView (MainComponent& ownerIn)
+    : owner (ownerIn)
 {
     midiInputLabel.attachToComponent (&midiInputBox, true);
     statusLabel.setJustificationType (juce::Justification::centredLeft);
     addAndMakeVisible (midiInputBox);
     addAndMakeVisible (statusLabel);
+
+    midiInputBox.onChange = [this]
+    {
+        owner.midiInputSelectionChangedFromView();
+    };
 }
 
+/** Fills the background and draws routing/sync instructions in the lower area. */
 void MainView::paint (juce::Graphics& g)
 {
     g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
@@ -28,6 +38,7 @@ void MainView::paint (juce::Graphics& g)
     drawInstructions (g, juce::Rectangle<int> { 14, 100, getWidth() - 28, 80 });
 }
 
+/** Positions the MIDI combo and status label at the top with standard margins. */
 void MainView::resized()
 {
     auto r = getLocalBounds().reduced (12);
