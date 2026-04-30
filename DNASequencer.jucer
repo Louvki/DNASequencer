@@ -8,6 +8,8 @@
       <FILE id="RsgyaM" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
       <FILE id="uINQwW" name="MainComponent.cpp" compile="1" resource="0"
             file="Source/MainComponent.cpp"/>
+      <FILE id="MvVwH9" name="MainView.h" compile="0" resource="0" file="Source/MainView.h"/>
+      <FILE id="MvVwC8" name="MainView.cpp" compile="1" resource="0" file="Source/MainView.cpp"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>

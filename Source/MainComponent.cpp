@@ -3,26 +3,18 @@
 namespace
 {
 constexpr float kTwoPi = juce::MathConstants<float>::twoPi;
-
-void drawInstructions (juce::Graphics& g, juce::Rectangle<int> area)
-{
-    juce::GlyphArrangement glyphs;
-    glyphs.addJustifiedText (juce::Font (14.0f),
-                             "Ableton Link / Transport: Route MIDI Clock to this port (Mac: IAC or aggregate). "
-                             "Beeps sync to quarter notes while transport plays.",
-                             area.toFloat(), juce::Justification::topLeft);
-    glyphs.draw (g);
-}
 } // namespace
 
 //==============================================================================
 MainComponent::MainComponent()
 {
-    midiInputLabel.attachToComponent (&midiInputBox, true);
+    addAndMakeVisible (view);
+
+    auto& midiInputBox = view.getMidiInputBox();
 
     midiInputBox.onChange = [this]
     {
-        openMidiInput (midiInputBox.getSelectedId() - 1);
+        openMidiInput (view.getMidiInputBox().getSelectedId() - 1);
     };
 
     refreshMidiInputList();
@@ -32,10 +24,6 @@ MainComponent::MainComponent()
         midiInputBox.setSelectedId (1, juce::dontSendNotification);
         openMidiInput (0);
     }
-
-    statusLabel.setJustificationType (juce::Justification::centredLeft);
-    addAndMakeVisible (midiInputBox);
-    addAndMakeVisible (statusLabel);
 
     setSize (520, 200);
 
@@ -113,6 +101,8 @@ void MainComponent::handleIncomingMidiMessage (juce::MidiInput*, const juce::Mid
 
 void MainComponent::refreshMidiInputList()
 {
+    auto& midiInputBox = view.getMidiInputBox();
+
     midiInputBox.clear();
 
     auto devices = juce::MidiInput::getAvailableDevices();
@@ -123,7 +113,7 @@ void MainComponent::refreshMidiInputList()
     if (devices.isEmpty())
         midiInputBox.addItem ("(no MIDI inputs)", 1);
 
-    repaint();
+    view.repaint();
 }
 
 void MainComponent::openMidiInput (int deviceIndex)
@@ -135,6 +125,8 @@ void MainComponent::openMidiInput (int deviceIndex)
     }
 
     auto devices = juce::MidiInput::getAvailableDevices();
+
+    auto& statusLabel = view.getStatusLabel();
 
     if (deviceIndex < 0 || deviceIndex >= devices.size())
     {
@@ -207,16 +199,7 @@ void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& buffe
 void MainComponent::releaseResources() {}
 
 //==============================================================================
-void MainComponent::paint (juce::Graphics& g)
-{
-    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
-
-    drawInstructions (g, juce::Rectangle<int> { 14, 100, getWidth() - 28, 80 });
-}
-
 void MainComponent::resized()
 {
-    auto r = getLocalBounds().reduced (12);
-    midiInputBox.setBounds (r.removeFromTop (28).withWidth (juce::jmin (360, r.getWidth())));
-    statusLabel.setBounds (r.withTrimmedTop (4).removeFromTop (28));
+    view.setBounds (getLocalBounds());
 }

@@ -5,6 +5,8 @@
 
 #include <JuceHeader.h>
 
+#include "MainView.h"
+
 //==============================================================================
 class MainComponent  : public juce::AudioAppComponent,
                        public juce::MidiInputCallback
@@ -17,7 +19,6 @@ public:
     void getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill) override;
     void releaseResources() override;
 
-    void paint (juce::Graphics& g) override;
     void resized() override;
 
     void handleIncomingMidiMessage (juce::MidiInput* source, const juce::MidiMessage& message) override;
@@ -32,9 +33,7 @@ private:
 
     std::unique_ptr<juce::MidiInput> midiInput;
 
-    juce::ComboBox midiInputBox;
-    juce::Label midiInputLabel  { {}, "MIDI Input" };
-    juce::Label statusLabel;
+    MainView view;
 
     double currentSampleRate = 44100.0;
 
