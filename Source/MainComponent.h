@@ -12,17 +12,18 @@ class MainComponent  : public juce::AudioAppComponent,
                        public juce::MidiInputCallback
 {
 public:
-    /** Hosts `MainView`, builds the MIDI device list, opens default input, configures audio outputs. */
+    /** Builds the UI, fills the MIDI device list, connects the default port, sizes the window,
+        and opens the audio device with zero I/O channels (required by `AudioAppComponent`). */
     MainComponent();
-    /** Stops audio I/O and releases the MIDI input. */
+    /** Stops audio I/O and closes any open MIDI input device. */
     ~MainComponent() override;
 
     /** MainView calls this when the MIDI input combo selection changes. */
     void midiInputSelectionChangedFromView();
 
-    /** Called before playback starts; caches sample rate for click synthesis. */
+    /** `AudioAppComponent` hook before I/O runs; no audio synthesis — parameters unused. */
     void prepareToPlay (int samplesPerBlockExpected, double sampleRate) override;
-    /** Generates audio each block (silence or beat click mix-in). */
+    /** Clears each output block (zero audio channels; satisfies the base class contract). */
     void getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill) override;
     /** Release hook for audio resources (unused here). */
     void releaseResources() override;
@@ -43,30 +44,15 @@ private:
     /** Selects list index 0 in the combo and opens it (internal startup path). */
     void selectFirstMidiInputIfAvailable();
 
-    /** Enables stereo output; on platforms that require it, asks for record-audio permission first. */
-    void setupAudioOutputs();
-
-    /** Recognises MIDI realtime Start / Continue / Stop status bytes. */
-    static bool isMidiStart (const juce::MidiMessage& m);
-    static bool isMidiContinue (const juce::MidiMessage& m);
-    static bool isMidiStop (const juce::MidiMessage& m);
-
     std::unique_ptr<juce::MidiInput> midiInput;
 
     MainView view;
 
-    double currentSampleRate = 44100.0;
-
-    /** Only touched from MIDI input thread. */
+    /** MIDI clock position within the current quarter note (0–23); only touched on MIDI input thread. */
     int midiClockTickInBeat = 0;
 
+    /** Set true after MIDI Start / Continue, false after MIDI Stop (atomic for cross-thread visibility). */
     std::atomic<bool> transportRunning { false };
-    std::atomic<bool> beepPending { false };
-
-    int totalBeepSamples = 0;
-    int beepSamplesRemaining = 0;
-    float beepPhase = 0.0f;
-    static constexpr float beepFrequencyHz = 880.0f;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

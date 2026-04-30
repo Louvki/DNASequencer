@@ -1,26 +1,20 @@
 #include "MainComponent.h"
 
-namespace
-{
-constexpr float kTwoPi = juce::MathConstants<float>::twoPi;
-} // namespace
-
 //==============================================================================
 /** Builds the UI, fills the MIDI device list and connects the default port, sizes the window,
-    and starts audio via `setupAudioOutputs`. */
+    and opens the audio device with zero I/O channels (required by `AudioAppComponent`). */
 MainComponent::MainComponent()
     : view (*this)
 {
     // Initializes the GUI
-    addAndMakeVisible (view); 
+    addAndMakeVisible (view);
     setSize (520, 200);
 
     initialiseMidiInputs();
-
-    setupAudioOutputs();
+    setAudioChannels (0, 0);
 }
 
-/** Destructor Stops audio I/O and closes any open MIDI input device. */
+/** Destructor: Stops audio I/O and closes any open MIDI input device. */
 MainComponent::~MainComponent()
 {
     shutdownAudio();
@@ -28,57 +22,40 @@ MainComponent::~MainComponent()
     midiInput.reset();
 }
 
-/** Enables stereo playback; requests mic-related permission when the OS ties output to it (e.g. Android). */
-void MainComponent::setupAudioOutputs()
-{
-    if (juce::RuntimePermissions::isRequired (juce::RuntimePermissions::recordAudio)
-        && ! juce::RuntimePermissions::isGranted (juce::RuntimePermissions::recordAudio))
-    {
-        juce::RuntimePermissions::request (juce::RuntimePermissions::recordAudio,
-                                           [&] (bool granted) { setAudioChannels (0, granted ? 2 : 0); });
-    }
-    else
-        setAudioChannels (0, 2);
-}
-
-
-
 //==============================================================================
-/** MIDI callback: counts clock ticks into quarter notes while transport runs; toggles transportRunning on Start / Continue / Stop. */
+/** MIDI callback: counts clock ticks into quarter notes (24 PPQN) while transport runs;
+    toggles `transportRunning` on Start (0xFA), Continue (0xFB), and Stop (0xFC). */
 void MainComponent::handleIncomingMidiMessage (juce::MidiInput*, const juce::MidiMessage& message)
 {
-    // MIDI clock: 24 ticks per quarter note; each full beat queues one audible click on the audio thread.
     if (message.isMidiClock())
     {
         if (! transportRunning.load (std::memory_order_acquire))
             return;
 
         if (++midiClockTickInBeat >= 24)
-        {
             midiClockTickInBeat = 0;
-            beepPending.store (true, std::memory_order_release);
-        }
 
         return;
     }
 
-    bool isMidiStart = m.getRawDataSize() >= 1 && m.getRawData()[0] == 0xfa;
-    if (isMidiStart (message))
+    
+    const bool isMidiStart = message.getRawDataSize() >= 1 && message.getRawData()[0] == 0xfa;
+    if (isMidiStart)
     {
         midiClockTickInBeat = 0;
         transportRunning.store (true, std::memory_order_release);
         return;
     }
-
-    bool isMidiContinue = m.getRawDataSize() >= 1 && m.getRawData()[0] == 0xfb;
-    if (isMidiContinue (message))
+    
+    const bool isMidiContinue = message.getRawDataSize() >= 1 && message.getRawData()[0] == 0xfb;
+    if (isMidiContinue)
     {
         transportRunning.store (true, std::memory_order_release);
         return;
     }
-
-    bool isMidiStop = m.getRawDataSize() >= 1 && m.getRawData()[0] == 0xfc;
-    if (isMidiStop (message))
+    
+    const bool isMidiStop = message.getRawDataSize() >= 1 && message.getRawData()[0] == 0xfc;
+    if (isMidiStop)
     {
         transportRunning.store (false, std::memory_order_release);
         return;
@@ -86,7 +63,7 @@ void MainComponent::handleIncomingMidiMessage (juce::MidiInput*, const juce::Mid
 }
 
 //==============================================================================
-// Selecting MIDI Inputs 
+// Selecting MIDI Inputs
 /** Populates the MIDI device dropdown and selects/opens the first device when the system reports any inputs. */
 void MainComponent::initialiseMidiInputs()
 {
@@ -162,58 +139,16 @@ void MainComponent::selectMidiInputDevice (int deviceIndex)
 }
 
 //==============================================================================
-/** Stores sample rate and computes how many samples make one beat-click envelope (~35 ms). */
-void MainComponent::prepareToPlay (int, double sampleRate)
+/** `AudioAppComponent` hook before I/O runs; no audio output in this app — parameters ignored. */
+void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 {
-    currentSampleRate = sampleRate;
-    // Short sine burst (~35 ms) at output sample rate for the beat click.
-    totalBeepSamples = juce::jmax (1, (int) (0.035 * sampleRate));
-    beepSamplesRemaining = 0;
-    beepPhase = 0.0f;
+    juce::ignoreUnused (samplesPerBlockExpected, sampleRate);
 }
 
-/** Outputs silence unless a beat click was queued from MIDI clock; then mixes a decaying sine burst onto all channels. */
+/** Clears each output block; no samples are synthesized (MIDI clock handling is on the MIDI thread). */
 void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill)
 {
     bufferToFill.clearActiveBufferRegion();
-
-    auto* buffer = bufferToFill.buffer;
-
-    if (buffer == nullptr || buffer->getNumChannels() < 1)
-        return;
-
-    // Atomically consume pending beep flag from MIDI thread; start envelope on audio thread.
-    if (beepPending.exchange (false))
-    {
-        beepSamplesRemaining = totalBeepSamples;
-        beepPhase = 0.0f;
-    }
-
-    if (beepSamplesRemaining <= 0)
-        return;
-
-    const int start = bufferToFill.startSample;
-    const int numSamples = bufferToFill.numSamples;
-    const int numCh = buffer->getNumChannels();
-    const float inc = kTwoPi * beepFrequencyHz / (float) currentSampleRate;
-
-    for (int i = 0; i < numSamples && beepSamplesRemaining > 0; ++i)
-    {
-        // Linear decay envelope + sine; add to all channels.
-        const float env = (float) beepSamplesRemaining / (float) totalBeepSamples;
-        const float sample = env * std::sin ((double) beepPhase) * 0.25f;
-        beepPhase += inc;
-
-        while (beepPhase >= kTwoPi)
-            beepPhase -= kTwoPi;
-
-        const int pos = start + i;
-
-        for (int ch = 0; ch < numCh; ++ch)
-            buffer->addSample (ch, pos, sample);
-
-        --beepSamplesRemaining;
-    }
 }
 
 /** No teardown needed beyond base class handling. */
