@@ -10,6 +10,12 @@
             file="Source/MainComponent.cpp"/>
       <FILE id="MvVwH9" name="MainView.h" compile="0" resource="0" file="Source/MainView.h"/>
       <FILE id="MvVwC8" name="MainView.cpp" compile="1" resource="0" file="Source/MainView.cpp"/>
+      <FILE id="SEQFL1" name="SequenceFileLoaderComponent.h" compile="0" resource="0"
+            file="Source/SequenceFileLoaderComponent.h"/>
+      <FILE id="SEQFL2" name="SequenceFileLoaderComponent.cpp" compile="1" resource="0"
+            file="Source/SequenceFileLoaderComponent.cpp"/>
+      <FILE id="DNAFL1" name="DnaFastaLoader.h" compile="0" resource="0" file="Source/DnaFastaLoader.h"/>
+      <FILE id="DNAFL2" name="DnaFastaLoader.cpp" compile="1" resource="0" file="Source/DnaFastaLoader.cpp"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>

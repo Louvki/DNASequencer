@@ -2,6 +2,8 @@
 
 #include <JuceHeader.h>
 
+#include "SequenceFileLoaderComponent.h"
+
 class MainComponent;
 
 class MainView : public juce::Component
@@ -15,6 +17,8 @@ public:
     /** Shows whether an input opened successfully and which port name is active. */
     juce::Label& getStatusLabel() noexcept { return statusLabel; }
 
+    SequenceFileLoaderComponent& getSequenceFileLoader() noexcept { return sequenceFileLoader; }
+
     /** Background fill plus hint text about MIDI clock routing. */
     void paint (juce::Graphics& g) override;
     /** Places combo and status row under top margin. */
@@ -26,6 +30,8 @@ private:
     juce::ComboBox midiInputBox;
     juce::Label midiInputLabel { {}, "MIDI Input" };
     juce::Label statusLabel;
+
+    SequenceFileLoaderComponent sequenceFileLoader;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainView)
 };

@@ -23,6 +23,7 @@ MainView::MainView (MainComponent& ownerIn)
     statusLabel.setJustificationType (juce::Justification::centredLeft);
     addAndMakeVisible (midiInputBox);
     addAndMakeVisible (statusLabel);
+    addAndMakeVisible (sequenceFileLoader);
 
     midiInputBox.onChange = [this]
     {
@@ -35,7 +36,9 @@ void MainView::paint (juce::Graphics& g)
 {
     g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
 
-    drawInstructions (g, juce::Rectangle<int> { 14, 100, getWidth() - 28, 80 });
+    drawInstructions (g,
+                      juce::Rectangle<int> { 14, sequenceFileLoader.getBottom() + 10,
+                                             getWidth() - 28, juce::jmax (40, getHeight() - sequenceFileLoader.getBottom() - 22) });
 }
 
 /** Positions the MIDI combo and status label at the top with standard margins. */
@@ -44,4 +47,5 @@ void MainView::resized()
     auto r = getLocalBounds().reduced (12);
     midiInputBox.setBounds (r.removeFromTop (28).withWidth (juce::jmin (360, r.getWidth())));
     statusLabel.setBounds (r.withTrimmedTop (4).removeFromTop (28));
+    sequenceFileLoader.setBounds (r.withTrimmedTop (6).removeFromTop (64));
 }

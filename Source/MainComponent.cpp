@@ -8,7 +8,7 @@ MainComponent::MainComponent()
 {
     // Initializes the GUI
     addAndMakeVisible (view);
-    setSize (520, 200);
+    setSize (520, 300);
 
     initialiseMidiInputs();
     setAudioChannels (0, 0);
