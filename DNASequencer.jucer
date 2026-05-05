@@ -16,6 +16,8 @@
             file="Source/SequenceFileLoaderComponent.cpp"/>
       <FILE id="DNAFL1" name="DnaFastaLoader.h" compile="0" resource="0" file="Source/DnaFastaLoader.h"/>
       <FILE id="DNAFL2" name="DnaFastaLoader.cpp" compile="1" resource="0" file="Source/DnaFastaLoader.cpp"/>
+      <FILE id="ERLOGH" name="ErrorLog.h" compile="0" resource="0" file="Source/ErrorLog.h"/>
+      <FILE id="ERLOGC" name="ErrorLog.cpp" compile="1" resource="0" file="Source/ErrorLog.cpp"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>

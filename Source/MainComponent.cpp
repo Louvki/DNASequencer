@@ -1,4 +1,5 @@
 #include "MainComponent.h"
+#include "ErrorLog.h"
 
 //==============================================================================
 /** Builds the UI, fills the MIDI device list and connects the default port, sizes the window,
@@ -122,7 +123,9 @@ void MainComponent::selectMidiInputDevice (int deviceIndex)
 
     if (deviceIndex < 0 || deviceIndex >= devices.size())
     {
-        statusLabel.setText ("No MIDI input device.", juce::dontSendNotification);
+        const auto error = juce::String ("No MIDI input device.");
+        statusLabel.setText (error, juce::dontSendNotification);
+        ErrorLog::getInstance().addError ("MIDI", error);
         return;
     }
 
@@ -130,7 +133,9 @@ void MainComponent::selectMidiInputDevice (int deviceIndex)
 
     if (midiInput == nullptr)
     {
-        statusLabel.setText ("Could not open MIDI input.", juce::dontSendNotification);
+        const auto error = juce::String ("Could not open MIDI input.");
+        statusLabel.setText (error, juce::dontSendNotification);
+        ErrorLog::getInstance().addError ("MIDI", error);
         return;
     }
 

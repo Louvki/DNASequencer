@@ -8,6 +8,7 @@
 
 #include <JuceHeader.h>
 #include "MainComponent.h"
+#include "ErrorLog.h"
 
 //==============================================================================
 class DNASequencerApplication  : public juce::JUCEApplication
@@ -24,6 +25,9 @@ public:
     void initialise (const juce::String& commandLine) override
     {
         // This method is where you should put your application's initialisation code..
+        juce::ignoreUnused (commandLine);
+
+        ErrorLog::getInstance().installForMac();
 
         mainWindow.reset (new MainWindow (getApplicationName()));
     }
@@ -31,6 +35,7 @@ public:
     void shutdown() override
     {
         // Add your application's shutdown code here..
+        ErrorLog::getInstance().uninstallForMac();
 
         mainWindow = nullptr; // (deletes our window)
     }
@@ -48,6 +53,7 @@ public:
         // When another instance of the app is launched while this one is running,
         // this method is invoked, and the commandLine parameter tells you what
         // the other instance's command-line arguments were.
+        juce::ignoreUnused (commandLine);
     }
 
     //==============================================================================

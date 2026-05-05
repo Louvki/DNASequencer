@@ -1,5 +1,6 @@
 #include "SequenceFileLoaderComponent.h"
 #include "DnaFastaLoader.h"
+#include "ErrorLog.h"
 
 /* UI only: */
 
@@ -128,6 +129,7 @@ void SequenceFileLoaderComponent::deliverLoadFailed (juce::String error)
         lastError_ = error;
     }
 
+    ErrorLog::getInstance().addError ("SequenceFileLoader", error);
     updateUiLabels();
 }
 
