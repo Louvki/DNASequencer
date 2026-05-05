@@ -1,46 +1,38 @@
 #include "SequenceFileLoaderComponent.h"
 #include "DnaFastaLoader.h"
 
-/* UI only: disk + parsing live in `dna::DnaFastaLoader`; worker thread + `callAsync` mirror Max yield + main thread. */
+/* UI only: */
 
 //==============================================================================
 SequenceFileLoaderComponent::SequenceFileLoaderComponent()
 {
+    // File name label
+    addAndMakeVisible (fileNameLabel);
+    fileNameLabel.setJustificationType (juce::Justification::centredLeft);
+    fileNameLabel.setMinimumHorizontalScale (1.0f);
+    fileNameLabel.setText ("No file selected", juce::dontSendNotification);
+
+    // File loading... Etc
+    addAndMakeVisible (fileStatusLabel);
+    fileStatusLabel.setJustificationType (juce::Justification::centredLeft);
+    fileStatusLabel.setText ({}, juce::dontSendNotification);
+
     addAndMakeVisible (openButton);
-    addAndMakeVisible (fileLabel);
-    fileLabel.setJustificationType (juce::Justification::centredLeft);
-    fileLabel.setText ("No file selected", juce::dontSendNotification);
-    fileLabel.setMinimumHorizontalScale (1.0f);
-
-    addAndMakeVisible (statusLabel);
-    statusLabel.setJustificationType (juce::Justification::centredLeft);
-    statusLabel.setText ({}, juce::dontSendNotification);
-
     openButton.onClick = [this]
     {
-        // Keep the chooser alive until the async callback returns (JUCE lifetime rule).
-        aliveChooserHold_ = std::make_unique<juce::FileChooser> ("Select DNA/FASTA file",
-                                                                 juce::File {},
-                                                                 "*");
+        // Keep the file chooser alive until the async callback returns (JUCE lifetime rule).
+        aliveChooserHold_ = std::make_unique<juce::FileChooser> ("Select DNA/FASTA file", juce::File {}, "*");
 
         const auto flags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles;
 
-        aliveChooserHold_->launchAsync (flags, [this] (const juce::FileChooser& browser)
-                                        {
-                                            const auto results = browser.getResults();
-
-                                            if (results.size() != 1)
-                                            {
-                                                aliveChooserHold_.reset();
-                                                return;
-                                            }
-
-                                            beginLoadFromFile (results.getReference (0));
-                                            aliveChooserHold_.reset();
-                                        });
+        // Open the dialog and handle selected file
+        aliveChooserHold_->launchAsync (flags, [this] (const juce::FileChooser& browser) { 
+            handleFileChooserResult (browser); 
+        });
     };
 }
 
+// On destroy hook
 SequenceFileLoaderComponent::~SequenceFileLoaderComponent()
 {
     // Ensure the worker never touches freed members (`this` owns the thread).
@@ -50,7 +42,7 @@ SequenceFileLoaderComponent::~SequenceFileLoaderComponent()
 void SequenceFileLoaderComponent::joinLoadThread()
 {
     // Tells `runBackgroundLoad` to bail before scheduling UI updates (new file picked, or component destroyed).
-    loadCancelRequested_.store (true);
+    isFileLoadCancelRequested_.store (true);
 
     if (loadThread_ != nullptr)
     {
@@ -62,18 +54,22 @@ void SequenceFileLoaderComponent::joinLoadThread()
 
     // Ready for the next session; cleared again in `beginLoadFromFile`, but resetting here avoids weird states
     // if no follow-up load is started.
-    loadCancelRequested_.store (false);
+    isFileLoadCancelRequested_.store (false);
 }
 
-bool SequenceFileLoaderComponent::isLoadInProgress() const noexcept
+void SequenceFileLoaderComponent::handleFileChooserResult (const juce::FileChooser& browser)
 {
-    return loadActive_.load();
-}
+    const auto selectedFiles = browser.getResults();
 
-juce::String SequenceFileLoaderComponent::getDisplayedFileName() const
-{
-    const juce::ScopedLock sl (dataLock_);
-    return displayedFileShortName_;
+    // Cancel if more than 1 file is selected
+    if (selectedFiles.size() != 1)
+    {
+        aliveChooserHold_.reset();
+        return;
+    }
+
+    beginLoadFromFile (selectedFiles.getReference (0));
+    aliveChooserHold_.reset();
 }
 
 juce::String SequenceFileLoaderComponent::getLastError() const
@@ -100,9 +96,9 @@ void SequenceFileLoaderComponent::resized()
     auto top = r.removeFromTop (30);
     openButton.setBounds (top.withWidth (juce::jmin (220, top.getWidth() - 4)));
     auto rest = top.withTrimmedLeft (openButton.getWidth() + 8).withTrimmedBottom (4);
-    fileLabel.setBounds (rest);
+    fileNameLabel.setBounds (rest);
 
-    statusLabel.setBounds (r.withTrimmedTop (2).removeFromTop (24));
+    fileStatusLabel.setBounds (r.withTrimmedTop (2).removeFromTop (24));
 }
 
 // Runs on the JUCE message thread only — analogous to firing Max outlets after processing.
@@ -110,7 +106,7 @@ void SequenceFileLoaderComponent::deliverLoadSucceeded (juce::String&& sequenceU
                                                       std::vector<std::int64_t>&& codonPositions)
 {
     // Stores `fileContent` + `startCodonMap` analogues for later sequencing code.
-    loadActive_.store (false);
+    isFileLoadInProgress_.store (false);
 
     {
         const juce::ScopedLock sl (dataLock_);
@@ -125,7 +121,7 @@ void SequenceFileLoaderComponent::deliverLoadSucceeded (juce::String&& sequenceU
 // Failure path queued from worker open errors; keeps label updates coherent with successes.
 void SequenceFileLoaderComponent::deliverLoadFailed (juce::String error)
 {
-    loadActive_.store (false);
+    isFileLoadInProgress_.store (false);
 
     {
         const juce::ScopedLock sl (dataLock_);
@@ -140,25 +136,30 @@ void SequenceFileLoaderComponent::beginLoadFromFile (const juce::File& file)
     // Never two loads at once: wait out the previous worker before mutating shared UI/file state.
     joinLoadThread();
 
+    // The braces are to create a lock. This is so the background thread and the UI thread 
+    // both do not touch lastError at the same time which might cause errors.
     {
         const juce::ScopedLock sl (dataLock_);
         lastError_.clear();
     }
 
-    if (! file.existsAsFile())
+    // Early exit
+    if (!file.existsAsFile())
     {
         deliverLoadFailed ("File does not exist.");
         return;
     }
 
+    // The braces are to create a lock. This is so the background thread and the UI thread 
+    // both do not touch lastError at the same time which might cause errors.
     {
         const juce::ScopedLock sl (dataLock_);
         displayedFileShortName_ = dna::DnaFastaLoader::truncateFileNameForDisplay (file.getFileName());
     }
 
-    loadActive_.store (true);
-
-    loadCancelRequested_.store (false);
+    isFileLoadInProgress_.store (true);
+    
+    isFileLoadCancelRequested_.store (false); // Reset to default value
 
     updateUiLabels();
 
@@ -173,7 +174,7 @@ void SequenceFileLoaderComponent::beginLoadFromFile (const juce::File& file)
 
 void SequenceFileLoaderComponent::runBackgroundLoad (juce::File file)
 {
-    auto result = dna::DnaFastaLoader::processFile (file, &loadCancelRequested_);
+    auto result = dna::DnaFastaLoader::processFile (file, &isFileLoadCancelRequested_);
 
     if (result.cancelled)
         return;
@@ -206,7 +207,7 @@ void SequenceFileLoaderComponent::updateUiLabels()
     juce::String errCopy;
     juce::String successLine;
 
-    const bool reading = loadActive_.load();
+    const bool isReadingFile = isFileLoadInProgress_.load();
 
     {
         const juce::ScopedLock sl (dataLock_);
@@ -214,21 +215,21 @@ void SequenceFileLoaderComponent::updateUiLabels()
         fileShown = displayedFileShortName_;
         errCopy = lastError_;
 
-        if (! reading && errCopy.isEmpty() && loadedSequence_.isNotEmpty())
+        if (!isReadingFile && errCopy.isEmpty() && loadedSequence_.isNotEmpty())
             successLine = "Finished. Length: "
                           + juce::String ((juce::int64) loadedSequence_.length())
                           + " bp, ATG codons: "
                           + juce::String ((juce::int64) startCodonMap_.size());
     }
 
-    fileLabel.setText (fileShown, juce::dontSendNotification);
+    fileNameLabel.setText (fileShown, juce::dontSendNotification);
 
     if (errCopy.isNotEmpty())
-        statusLabel.setText ("Error: " + errCopy, juce::dontSendNotification);
-    else if (reading)
-        statusLabel.setText ("Reading file...", juce::dontSendNotification);
+        fileStatusLabel.setText ("Error: " + errCopy, juce::dontSendNotification);
+    else if (isReadingFile)
+        fileStatusLabel.setText ("Reading file...", juce::dontSendNotification);
     else if (successLine.isNotEmpty())
-        statusLabel.setText (successLine, juce::dontSendNotification);
+        fileStatusLabel.setText (successLine, juce::dontSendNotification);
     else
-        statusLabel.setText ({}, juce::dontSendNotification);
+        fileStatusLabel.setText ({}, juce::dontSendNotification);
 }
