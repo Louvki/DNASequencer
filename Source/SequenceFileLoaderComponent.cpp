@@ -164,6 +164,9 @@ void SequenceFileLoaderComponent::runBackgroundLoad (juce::File file)
     // SUCCESS: 
     juce::MessageManager::callAsync(
         [weak = juce::Component::SafePointer<SequenceFileLoaderComponent>(this),
+         // std::move is used here to transfer ownership of result.dnaSequence and result.startCodonMap
+         // into the lambda's captured variables without copying their contents. This allows efficient
+         // transfer of large data structures by converting them into rvalue references.
          dnaSequence = std::move(result.dnaSequence),
          startCodonMap = std::move(result.startCodonMap)]() mutable
         {
@@ -180,6 +183,10 @@ void SequenceFileLoaderComponent::persistLoadedDna (juce::String dnaSequence, st
     // Stores `fileContent` + `startCodonMap` analogues for later sequencing code.
     isFileLoadInProgress_.store (false);
 
+    // We lock here to ensure thread safety when updating shared state.
+    // This code runs on the message thread (from callAsync) but updates fields also accessed by the loader worker thread and UI getters.
+    // The lock guarantees that updates to loadedDnaSequence_, startCodonMap_, and lastError_ are atomic with respect to any other thread
+    // accessing or mutating these fields, preventing inconsistent or partially updated state due to data races.
     {
         const juce::ScopedLock sl (dataLock_);
         loadedDnaSequence_ = std::move (dnaSequence);
