@@ -2,20 +2,13 @@
 
 #include <JuceHeader.h>
 
+#include "MidiInputSelectorComponent.h"
 #include "SequenceFileLoaderComponent.h"
-
-class MainComponent;
 
 class MainView : public juce::Component
 {
 public:
-    /** Arranges MIDI picker and status labels; combo changes notify `owner`. */
-    explicit MainView (MainComponent& owner);
-
-    /** MIDI device picker; changes invoke `MainComponent::midiInputSelectionChangedFromView`. */
-    juce::ComboBox& getMidiInputBox() noexcept { return midiInputBox; }
-    /** Shows whether an input opened successfully and which port name is active. */
-    juce::Label& getStatusLabel() noexcept { return statusLabel; }
+    explicit MainView (juce::MidiInputCallback& midiCallbackTarget);
 
     SequenceFileLoaderComponent& getSequenceFileLoader() noexcept { return sequenceFileLoader; }
 
@@ -25,11 +18,7 @@ public:
     void resized() override;
 
 private:
-    MainComponent& owner;
-
-    juce::ComboBox midiInputBox;
-    juce::Label midiInputLabel { {}, "MIDI Input" };
-    juce::Label statusLabel;
+    MidiInputSelectorComponent midiInputSelector;
 
     SequenceFileLoaderComponent sequenceFileLoader;
 

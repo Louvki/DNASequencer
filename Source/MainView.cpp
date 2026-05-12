@@ -1,5 +1,4 @@
 #include "MainView.h"
-#include "MainComponent.h"
 
 namespace
 {
@@ -15,20 +14,11 @@ void drawInstructions (juce::Graphics& g, juce::Rectangle<int> area)
 }
 } // namespace
 
-/** Lays out labels and combo box and forwards MIDI combo changes to `owner`. */
-MainView::MainView (MainComponent& ownerIn)
-    : owner (ownerIn)
+MainView::MainView (juce::MidiInputCallback& midiCallbackTarget)
+    : midiInputSelector (midiCallbackTarget)
 {
-    midiInputLabel.attachToComponent (&midiInputBox, true);
-    statusLabel.setJustificationType (juce::Justification::centredLeft);
-    addAndMakeVisible (midiInputBox);
-    addAndMakeVisible (statusLabel);
+    addAndMakeVisible (midiInputSelector);
     addAndMakeVisible (sequenceFileLoader);
-
-    midiInputBox.onChange = [this]
-    {
-        owner.midiInputSelectionChangedFromView();
-    };
 }
 
 /** Fills the background and draws routing/sync instructions in the lower area. */
@@ -45,7 +35,6 @@ void MainView::paint (juce::Graphics& g)
 void MainView::resized()
 {
     auto r = getLocalBounds().reduced (12);
-    midiInputBox.setBounds (r.removeFromTop (28).withWidth (juce::jmin (360, r.getWidth())));
-    statusLabel.setBounds (r.withTrimmedTop (4).removeFromTop (28));
+    midiInputSelector.setBounds (r.removeFromTop (60));
     sequenceFileLoader.setBounds (r.withTrimmedTop (6).removeFromTop (64));
 }

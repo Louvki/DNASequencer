@@ -18,9 +18,6 @@ public:
     /** Stops audio I/O and closes any open MIDI input device. */
     ~MainComponent() override;
 
-    /** MainView calls this when the MIDI input combo selection changes. */
-    void midiInputSelectionChangedFromView();
-
     /** `AudioAppComponent` hook before I/O runs; no audio synthesis — parameters unused. */
     void prepareToPlay (int samplesPerBlockExpected, double sampleRate) override;
     /** Clears each output block (zero audio channels; satisfies the base class contract). */
@@ -35,17 +32,6 @@ public:
     void handleIncomingMidiMessage (juce::MidiInput* source, const juce::MidiMessage& message) override;
 
 private:
-    /** Refills the MIDI device combo from the OS device list. */
-    void populateMidiInputDeviceList();
-    /** Opens or switches to the device at `deviceIndex`; updates status label. */
-    void selectMidiInputDevice (int deviceIndex);
-    /** Populates the device list and connects the first port when present. */
-    void initialiseMidiInputs();
-    /** Selects list index 0 in the combo and opens it (internal startup path). */
-    void selectFirstMidiInputIfAvailable();
-
-    std::unique_ptr<juce::MidiInput> midiInput;
-
     MainView view;
 
     /** MIDI clock position within the current quarter note (0–23); only touched on MIDI input thread. */

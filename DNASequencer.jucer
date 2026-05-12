@@ -10,6 +10,10 @@
             file="Source/MainComponent.cpp"/>
       <FILE id="MvVwH9" name="MainView.h" compile="0" resource="0" file="Source/MainView.h"/>
       <FILE id="MvVwC8" name="MainView.cpp" compile="1" resource="0" file="Source/MainView.cpp"/>
+      <FILE id="MIDSLH" name="MidiInputSelectorComponent.h" compile="0" resource="0"
+            file="Source/MidiInputSelectorComponent.h"/>
+      <FILE id="MIDSLC" name="MidiInputSelectorComponent.cpp" compile="1" resource="0"
+            file="Source/MidiInputSelectorComponent.cpp"/>
       <FILE id="SEQFL1" name="SequenceFileLoaderComponent.h" compile="0" resource="0"
             file="Source/SequenceFileLoaderComponent.h"/>
       <FILE id="SEQFL2" name="SequenceFileLoaderComponent.cpp" compile="1" resource="0"

@@ -1,5 +1,4 @@
 #include "MainComponent.h"
-#include "ErrorLog.h"
 
 //==============================================================================
 /** Builds the UI, fills the MIDI device list and connects the default port, sizes the window,
@@ -11,7 +10,6 @@ MainComponent::MainComponent()
     addAndMakeVisible (view);
     setSize (520, 300);
 
-    initialiseMidiInputs();
     setAudioChannels (0, 0);
 }
 
@@ -19,8 +17,6 @@ MainComponent::MainComponent()
 MainComponent::~MainComponent()
 {
     shutdownAudio();
-    if (midiInput != nullptr) midiInput->stop();
-    midiInput.reset();
 }
 
 //==============================================================================
@@ -30,7 +26,7 @@ void MainComponent::handleIncomingMidiMessage (juce::MidiInput*, const juce::Mid
 {
     if (message.isMidiClock())
     {
-        if (! transportRunning.load (std::memory_order_acquire))
+        if (!transportRunning.load (std::memory_order_acquire))
             return;
 
         if (++midiClockTickInBeat >= 24)
@@ -61,86 +57,6 @@ void MainComponent::handleIncomingMidiMessage (juce::MidiInput*, const juce::Mid
         transportRunning.store (false, std::memory_order_release);
         return;
     }
-}
-
-//==============================================================================
-// Selecting MIDI Inputs
-/** Populates the MIDI device dropdown and selects/opens the first device when the system reports any inputs. */
-void MainComponent::initialiseMidiInputs()
-{
-    populateMidiInputDeviceList();
-    selectFirstMidiInputIfAvailable();
-}
-
-/** Rebuilds combo items from `MidiInput::getAvailableDevices()`, or a single placeholder row if none exist. */
-void MainComponent::populateMidiInputDeviceList()
-{
-    auto& midiInputBox = view.getMidiInputBox();
-
-    midiInputBox.clear (juce::dontSendNotification);
-
-    auto devices = juce::MidiInput::getAvailableDevices();
-
-    for (int i = 0; i < devices.size(); ++i)
-        midiInputBox.addItem (devices[(size_t) i].name, i + 1);
-
-    if (devices.isEmpty())
-        midiInputBox.addItem ("(no MIDI inputs)", 1);
-
-    view.repaint();
-}
-
-/** Selects combo entry 1 without firing notifications and connects to device index 0 (no-op when no devices). */
-void MainComponent::selectFirstMidiInputIfAvailable()
-{
-    if (juce::MidiInput::getAvailableDevices().isEmpty())
-        return;
-
-    auto& midiInputBox = view.getMidiInputBox();
-    midiInputBox.setSelectedId (1, juce::dontSendNotification);
-    selectMidiInputDevice (0);
-}
-
-/** Invoked when the user picks a MIDI port in the combo; maps combo IDs (1-based) to device indices and opens that input. */
-void MainComponent::midiInputSelectionChangedFromView()
-{
-    const int comboItemId = view.getMidiInputBox().getSelectedId();
-    selectMidiInputDevice (comboItemId - 1);
-}
-
-/** Closes any previous MIDI input, opens `deviceIndex` from the current device list, updates status text, or reports failure. */
-void MainComponent::selectMidiInputDevice (int deviceIndex)
-{
-    if (midiInput != nullptr)
-    {
-        midiInput->stop();
-        midiInput.reset();
-    }
-
-    auto devices = juce::MidiInput::getAvailableDevices();
-
-    auto& statusLabel = view.getStatusLabel();
-
-    if (deviceIndex < 0 || deviceIndex >= devices.size())
-    {
-        const auto error = juce::String ("No MIDI input device.");
-        statusLabel.setText (error, juce::dontSendNotification);
-        ErrorLog::getInstance().addError ("MIDI", error);
-        return;
-    }
-
-    midiInput = juce::MidiInput::openDevice (devices[(size_t) deviceIndex].identifier, this);
-
-    if (midiInput == nullptr)
-    {
-        const auto error = juce::String ("Could not open MIDI input.");
-        statusLabel.setText (error, juce::dontSendNotification);
-        ErrorLog::getInstance().addError ("MIDI", error);
-        return;
-    }
-
-    midiInput->start();
-    statusLabel.setText ("Listening: " + devices[(size_t) deviceIndex].name, juce::dontSendNotification);
 }
 
 //==============================================================================
