@@ -26,9 +26,15 @@ void MainView::paint (juce::Graphics& g)
 {
     g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
 
-    drawInstructions (g,
-                      juce::Rectangle<int> { 14, sequenceFileLoader.getBottom() + 10,
-                                             getWidth() - 28, juce::jmax (40, getHeight() - sequenceFileLoader.getBottom() - 22) });
+    auto instructionArea = juce::Rectangle<int> {
+        14,
+        sequenceFileLoader.getBottom() + 10,
+        getWidth() - 28,
+        std::max (40, getHeight() - sequenceFileLoader.getBottom() - 22)
+    };
+    drawInstructions (g, instructionArea);
+
+                                        
 }
 
 /** Positions the MIDI combo and status label at the top with standard margins. */
