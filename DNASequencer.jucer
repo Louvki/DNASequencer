@@ -22,6 +22,8 @@
       <FILE id="DNAFL2" name="DnaFastaLoader.cpp" compile="1" resource="0" file="Source/DnaFastaLoader.cpp"/>
       <FILE id="ERLOGH" name="ErrorLog.h" compile="0" resource="0" file="Source/ErrorLog.h"/>
       <FILE id="ERLOGC" name="ErrorLog.cpp" compile="1" resource="0" file="Source/ErrorLog.cpp"/>
+      <FILE id="AMINOH" name="AminoAcids.h" compile="0" resource="0" file="Source/AminoAcids.h"/>
+      <FILE id="AMINOC" name="AminoAcids.cpp" compile="1" resource="0" file="Source/AminoAcids.cpp"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>
