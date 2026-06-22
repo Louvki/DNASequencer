@@ -10,20 +10,74 @@
             file="Source/MainComponent.cpp"/>
       <FILE id="MvVwH9" name="MainView.h" compile="0" resource="0" file="Source/MainView.h"/>
       <FILE id="MvVwC8" name="MainView.cpp" compile="1" resource="0" file="Source/MainView.cpp"/>
-      <FILE id="MIDSLH" name="MidiInputSelectorComponent.h" compile="0" resource="0"
-            file="Source/MidiInputSelectorComponent.h"/>
-      <FILE id="MIDSLC" name="MidiInputSelectorComponent.cpp" compile="1" resource="0"
-            file="Source/MidiInputSelectorComponent.cpp"/>
-      <FILE id="SEQFL1" name="SequenceFileLoaderComponent.h" compile="0" resource="0"
-            file="Source/SequenceFileLoaderComponent.h"/>
-      <FILE id="SEQFL2" name="SequenceFileLoaderComponent.cpp" compile="1" resource="0"
-            file="Source/SequenceFileLoaderComponent.cpp"/>
-      <FILE id="DNAFL1" name="DnaFastaLoader.h" compile="0" resource="0" file="Source/DnaFastaLoader.h"/>
-      <FILE id="DNAFL2" name="DnaFastaLoader.cpp" compile="1" resource="0" file="Source/DnaFastaLoader.cpp"/>
-      <FILE id="ERLOGH" name="ErrorLog.h" compile="0" resource="0" file="Source/ErrorLog.h"/>
-      <FILE id="ERLOGC" name="ErrorLog.cpp" compile="1" resource="0" file="Source/ErrorLog.cpp"/>
-      <FILE id="AMINOH" name="AminoAcids.h" compile="0" resource="0" file="Source/AminoAcids.h"/>
-      <FILE id="AMINOC" name="AminoAcids.cpp" compile="1" resource="0" file="Source/AminoAcids.cpp"/>
+      <GROUP id="SEQCR1" name="Sequencer">
+        <FILE id="MIDSLH" name="MidiInputSelectorComponent.h" compile="0" resource="0"
+              file="Source/Sequencer/MidiInputSelectorComponent.h"/>
+        <FILE id="MIDSLC" name="MidiInputSelectorComponent.cpp" compile="1" resource="0"
+              file="Source/Sequencer/MidiInputSelectorComponent.cpp"/>
+        <FILE id="MCDIVH" name="MidiClockDivision.h" compile="0" resource="0"
+              file="Source/Sequencer/MidiClockDivision.h"/>
+        <FILE id="MCDIVC" name="MidiClockDivision.cpp" compile="1" resource="0"
+              file="Source/Sequencer/MidiClockDivision.cpp"/>
+        <FILE id="MCLKLH" name="MidiClockTickListener.h" compile="0" resource="0"
+              file="Source/Sequencer/MidiClockTickListener.h"/>
+        <FILE id="MCLKSH" name="MidiClockService.h" compile="0" resource="0"
+              file="Source/Sequencer/MidiClockService.h"/>
+        <FILE id="MCLKSC" name="MidiClockService.cpp" compile="1" resource="0"
+              file="Source/Sequencer/MidiClockService.cpp"/>
+        <FILE id="MCDSLH" name="MidiClockDivisionSelectorComponent.h" compile="0" resource="0"
+              file="Source/Sequencer/MidiClockDivisionSelectorComponent.h"/>
+        <FILE id="MCDSLC" name="MidiClockDivisionSelectorComponent.cpp" compile="1" resource="0"
+              file="Source/Sequencer/MidiClockDivisionSelectorComponent.cpp"/>
+        <FILE id="PBSTSH" name="PlaybackStatusComponent.h" compile="0" resource="0"
+              file="Source/Sequencer/PlaybackStatusComponent.h"/>
+        <FILE id="PBSTSC" name="PlaybackStatusComponent.cpp" compile="1" resource="0"
+              file="Source/Sequencer/PlaybackStatusComponent.cpp"/>
+        <FILE id="AASEQH" name="AminoAcidSequencePlayer.h" compile="0" resource="0"
+              file="Source/Sequencer/AminoAcidSequencePlayer.h"/>
+        <FILE id="AASEQC" name="AminoAcidSequencePlayer.cpp" compile="1" resource="0"
+              file="Source/Sequencer/AminoAcidSequencePlayer.cpp"/>
+        <FILE id="AASET1" name="AminoAcidPlaybackSettingsComponent.h" compile="0" resource="0"
+              file="Source/Sequencer/AminoAcidPlaybackSettingsComponent.h"/>
+        <FILE id="AASET2" name="AminoAcidPlaybackSettingsComponent.cpp" compile="1" resource="0"
+              file="Source/Sequencer/AminoAcidPlaybackSettingsComponent.cpp"/>
+      </GROUP>
+      <GROUP id="DATAST1" name="DataStructures">
+        <FILE id="MIDSCA" name="MidiScales.h" compile="0" resource="0"
+              file="Source/DataStructures/MidiScales.h"/>
+        <FILE id="MIDSCB" name="MidiScales.cpp" compile="1" resource="0"
+              file="Source/DataStructures/MidiScales.cpp"/>
+        <FILE id="AATRPH" name="AminoAcidTripletMap.h" compile="0" resource="0"
+              file="Source/DataStructures/AminoAcidTripletMap.h"/>
+        <FILE id="AATRPC" name="AminoAcidTripletMap.cpp" compile="1" resource="0"
+              file="Source/DataStructures/AminoAcidTripletMap.cpp"/>
+        <FILE id="AMINOH" name="AminoAcids.h" compile="0" resource="0"
+              file="Source/DataStructures/AminoAcids.h"/>
+        <FILE id="AMINOC" name="AminoAcids.cpp" compile="1" resource="0"
+              file="Source/DataStructures/AminoAcids.cpp"/>
+      </GROUP>
+      <GROUP id="LOADF1" name="LoadFile">
+        <FILE id="SEQFL1" name="SequenceFileLoaderComponent.h" compile="0" resource="0"
+              file="Source/LoadFile/SequenceFileLoaderComponent.h"/>
+        <FILE id="SEQFL2" name="SequenceFileLoaderComponent.cpp" compile="1" resource="0"
+              file="Source/LoadFile/SequenceFileLoaderComponent.cpp"/>
+        <FILE id="DNAFL1" name="DnaFastaLoader.h" compile="0" resource="0"
+              file="Source/LoadFile/DnaFastaLoader.h"/>
+        <FILE id="DNAFL2" name="DnaFastaLoader.cpp" compile="1" resource="0"
+              file="Source/LoadFile/DnaFastaLoader.cpp"/>
+      </GROUP>
+      <GROUP id="ERRRPT1" name="ErrorReporting">
+        <FILE id="ERLOGH" name="ErrorLog.h" compile="0" resource="0"
+              file="Source/ErrorReporting/ErrorLog.h"/>
+        <FILE id="ERLOGC" name="ErrorLog.cpp" compile="1" resource="0"
+              file="Source/ErrorReporting/ErrorLog.cpp"/>
+      </GROUP>
+    </GROUP>
+    <GROUP id="ARCHV1" name="Archive">
+      <FILE id="DNAPLH" name="DnaSequencePlayer.h" compile="0" resource="0"
+            file="Source/Archive/DnaSequencePlayer.h"/>
+      <FILE id="DNAPLC" name="DnaSequencePlayer.cpp" compile="0" resource="0"
+            file="Source/Archive/DnaSequencePlayer.cpp"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>

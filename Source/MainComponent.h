@@ -1,11 +1,12 @@
 #pragma once
 
-#include <atomic>
 #include <memory>
 
 #include <JuceHeader.h>
 
+#include "Sequencer/AminoAcidSequencePlayer.h"
 #include "MainView.h"
+#include "Sequencer/MidiClockService.h"
 
 //==============================================================================
 class MainComponent  : public juce::AudioAppComponent,
@@ -32,13 +33,16 @@ public:
     void handleIncomingMidiMessage (juce::MidiInput* source, const juce::MidiMessage& message) override;
 
 private:
+    void openDefaultMidiOutput();
+    void closeMidiOutput();
+    /** Sends note-off on Stop. */
+    void handleTransportSideEffects (const juce::MidiMessage& message);
+
+    MidiClockService midiClockService;
+    AminoAcidSequencePlayer aminoAcidSequencePlayer;
     MainView view;
 
-    /** MIDI clock position within the current quarter note (0–23); only touched on MIDI input thread. */
-    int midiClockTickInBeat = 0;
-
-    /** Set true after MIDI Start / Continue, false after MIDI Stop (atomic for cross-thread visibility). */
-    std::atomic<bool> transportRunning { false };
+    std::unique_ptr<juce::MidiOutput> midiOutput;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

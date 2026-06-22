@@ -1,4 +1,4 @@
-#include "AminoAcids.h"
+#include "DataStructures/AminoAcids.h"
 
 namespace dna
 {

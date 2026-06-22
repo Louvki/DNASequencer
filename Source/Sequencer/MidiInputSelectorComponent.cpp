@@ -1,5 +1,5 @@
-#include "MidiInputSelectorComponent.h"
-#include "ErrorLog.h"
+#include "Sequencer/MidiInputSelectorComponent.h"
+#include "ErrorReporting/ErrorLog.h"
 
 MidiInputSelectorComponent::MidiInputSelectorComponent (juce::MidiInputCallback& midiCallbackTarget)
     : callbackTarget (midiCallbackTarget)

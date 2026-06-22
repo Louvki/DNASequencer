@@ -8,7 +8,7 @@
 
 #include <JuceHeader.h>
 #include "MainComponent.h"
-#include "ErrorLog.h"
+#include "ErrorReporting/ErrorLog.h"
 
 //==============================================================================
 class DNASequencerApplication  : public juce::JUCEApplication

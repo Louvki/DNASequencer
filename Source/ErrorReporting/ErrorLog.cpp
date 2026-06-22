@@ -1,4 +1,4 @@
-#include "ErrorLog.h"
+#include "ErrorReporting/ErrorLog.h"
 
 namespace
 {

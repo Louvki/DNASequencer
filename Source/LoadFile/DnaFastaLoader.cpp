@@ -1,4 +1,4 @@
-#include "DnaFastaLoader.h"
+#include "LoadFile/DnaFastaLoader.h"
 
 #include <cctype>
 #include <limits>
@@ -41,6 +41,14 @@ namespace dna {
        
      // Uppercase
      currentChar = (unsigned char)std::toupper((int)currentChar);
+
+
+     // RNA conversion
+     auto uChar = (unsigned char)'U';
+     auto tChar = (unsigned char)'T';
+     if(currentChar == uChar) {
+      currentChar = tChar;
+     }
  
      // Add it to the acumulator
      totalFileContent.write(&currentChar, 1);

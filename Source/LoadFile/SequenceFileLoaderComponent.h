@@ -4,6 +4,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <thread>
 #include <vector>
@@ -13,14 +14,18 @@ class SequenceFileLoaderComponent : public juce::Component
 {
 public:
     SequenceFileLoaderComponent();
+    explicit SequenceFileLoaderComponent (std::function<void()> onResetClicked);
     ~SequenceFileLoaderComponent() override;
 
+    void setOnResetClicked (std::function<void()> callback);
     void resized() override;
 
     /** Full cleaned sequence (`chunks.join("")` then uppercased); empty until load finishes. */
     juce::String getLoadedDnaSequence() const;
     /** Global indices where `chunk[i:i+3]` was ATG in the sanitized stream (same semantics as JS). */
     std::vector<std::int64_t> getStartCodonMap() const;
+    /** Increments when a new sequence is persisted; used to detect file reloads. */
+    std::uint32_t getSequenceRevision() const noexcept { return sequenceRevision_.load (std::memory_order_acquire); }
 
 private:
     void handleFileChooserResult (const juce::FileChooser& browser);
@@ -31,17 +36,22 @@ private:
     void displayErrorInTheUi (juce::String error);
     void updateUiLabels();
 
-    juce::TextButton openButton { "Open FASTA/DNA..." };
+    juce::TextButton openButton { "Select file" };
+    juce::TextButton resetButton { "Reset" };
     juce::Label fileNameLabel;
     juce::Label fileStatusLabel;
     juce::String displayedFileShortName_ { "No file selected" };
     juce::String lastError_; // Used for displauying the error in the UI
+
+    std::function<void()> onResetClicked_;
 
     mutable juce::CriticalSection dataLock_; // Guards fields read by getters + `updateUiLabels` from the GUI.
 
     // The fields we get after reading the DNA file
     juce::String loadedDnaSequence_;
     std::vector<std::int64_t> startCodonMap_;
+
+    std::atomic<std::uint32_t> sequenceRevision_ { 0 };
 
     // `isFileLoadInProgress_` is an atomic boolean flag to indicate when a file load is in progress
     std::atomic<bool> isFileLoadInProgress_ { false }; 

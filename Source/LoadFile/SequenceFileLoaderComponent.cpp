@@ -1,11 +1,17 @@
-#include "SequenceFileLoaderComponent.h"
-#include "DnaFastaLoader.h"
-#include "ErrorLog.h"
+#include "LoadFile/SequenceFileLoaderComponent.h"
+#include "LoadFile/DnaFastaLoader.h"
+#include "ErrorReporting/ErrorLog.h"
 
 /* UI only: */
 
 //==============================================================================
 SequenceFileLoaderComponent::SequenceFileLoaderComponent()
+    : SequenceFileLoaderComponent (nullptr)
+{
+}
+
+SequenceFileLoaderComponent::SequenceFileLoaderComponent (std::function<void()> onResetClicked)
+    : onResetClicked_ (std::move (onResetClicked))
 {
     // File name label
     addAndMakeVisible (fileNameLabel);
@@ -29,6 +35,20 @@ SequenceFileLoaderComponent::SequenceFileLoaderComponent()
             handleFileChooserResult (browser); 
         });
     };
+
+    addAndMakeVisible (resetButton);
+    resetButton.onClick = [this]
+    {
+        if (onResetClicked_ != nullptr)
+            onResetClicked_();
+    };
+    resetButton.setVisible (onResetClicked_ != nullptr);
+}
+
+void SequenceFileLoaderComponent::setOnResetClicked (std::function<void()> callback)
+{
+    onResetClicked_ = std::move (callback);
+    resetButton.setVisible (onResetClicked_ != nullptr);
 }
 
 // On destroy hook
@@ -42,12 +62,16 @@ SequenceFileLoaderComponent::~SequenceFileLoaderComponent()
 void SequenceFileLoaderComponent::resized()
 {
     auto r = getLocalBounds();
-    auto top = r.removeFromTop (30);
+    constexpr int kButtonHeight = 28;
+    constexpr int kButtonGap = 4;
+    const auto buttonWidth = juce::jmin (220, r.getWidth());
 
-    openButton.setBounds (top.withWidth (juce::jmin (220, top.getWidth() - 4)));
-    auto rest = top.withTrimmedLeft (openButton.getWidth() + 8).withTrimmedBottom (4);
-    fileNameLabel.setBounds (rest);
-    fileStatusLabel.setBounds (r.withTrimmedTop (2).removeFromTop (24));
+    openButton.setBounds (r.removeFromTop (kButtonHeight).withWidth (buttonWidth));
+    r.removeFromTop (kButtonGap);
+    resetButton.setBounds (r.removeFromTop (kButtonHeight).withWidth (juce::jmin (100, buttonWidth)));
+    r.removeFromTop (6);
+    fileNameLabel.setBounds (r.removeFromTop (22));
+    fileStatusLabel.setBounds (r.removeFromTop (22));
 }
 
 juce::String SequenceFileLoaderComponent::getLoadedDnaSequence() const
@@ -193,6 +217,8 @@ void SequenceFileLoaderComponent::persistLoadedDna (juce::String dnaSequence, st
         startCodonMap_ = std::move (startCodonMap);
         lastError_.clear();
     }
+
+    sequenceRevision_.fetch_add (1, std::memory_order_release);
 }
 
 // Failure path queued from worker open errors; keeps label updates coherent with successes.
