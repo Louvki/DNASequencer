@@ -8,19 +8,19 @@
 void AminoAcidSequencePlayer::setRootNote (int note) noexcept
 {
     rootNote = juce::jlimit (0, 127, note);
-    rebuildTripletMap();
+    rebuildCodonMap();
 }
 
 void AminoAcidSequencePlayer::setScale (dna::MidiScale newScale) noexcept
 {
     scale = newScale;
-    rebuildTripletMap();
+    rebuildCodonMap();
 }
 
 void AminoAcidSequencePlayer::setNotePoolSize (int size) noexcept
 {
     notePoolSize = juce::jlimit (1, 20, size);
-    rebuildTripletMap();
+    rebuildCodonMap();
 }
 
 void AminoAcidSequencePlayer::setWhiteSpaceReadSpeed (int speed) noexcept
@@ -38,10 +38,10 @@ void AminoAcidSequencePlayer::setSustainEnabled (bool enabled) noexcept
     sustainEnabled = enabled;
 }
 
-void AminoAcidSequencePlayer::rebuildTripletMap()
+void AminoAcidSequencePlayer::rebuildCodonMap()
 {
     const auto scaled = dna::applyScaleToAminoAcids (rootNote, scale, notePoolSize);
-    tripletMap.rebuildFromScaledAminoAcids (scaled);
+    codonMap.rebuildFromScaledAminoAcids (scaled);
 }
 
 void AminoAcidSequencePlayer::resetReadPosition()
@@ -169,16 +169,16 @@ bool AminoAcidSequencePlayer::isIndexInStartMap (int index, const std::vector<st
     return std::binary_search (startMap.begin(), startMap.end(), static_cast<std::int64_t> (index));
 }
 
-juce::String AminoAcidSequencePlayer::readTripletAt (const juce::String& dna, int index)
+juce::String AminoAcidSequencePlayer::readCodonAt (const juce::String& dna, int index)
 {
     if (index < 0 || index + 2 >= dna.length())
         return {};
 
-    juce::String triplet;
-    triplet << juce::CharacterFunctions::toUpperCase (dna[index])
+    juce::String codon;
+    codon << juce::CharacterFunctions::toUpperCase (dna[index])
             << juce::CharacterFunctions::toUpperCase (dna[index + 1])
             << juce::CharacterFunctions::toUpperCase (dna[index + 2]);
-    return triplet;
+    return codon;
 }
 
 void AminoAcidSequencePlayer::refreshSequenceCache()
@@ -253,21 +253,21 @@ void AminoAcidSequencePlayer::advanceCodonMode()
         return;
     }
 
-    const auto triplet = readTripletAt (cachedDna, readIndex);
+    const auto codon = readCodonAt (cachedDna, readIndex);
     currentReadIndex.store (readIndex + 3, std::memory_order_release);
 
-    if (tripletMap.isStopCodon (triplet))
+    if (codonMap.isStopCodon (codon))
     {
         isReadingCodonsFlag.store (false, std::memory_order_release);
         stopActiveNote();
         return;
     }
 
-    const auto playback = tripletMap.lookupTriplet (triplet);
+    const auto playback = codonMap.lookupCodon (codon);
     if (! playback.has_value())
     {
         ErrorLog::getInstance().addError ("CodonPlayback",
-                                         "Invalid codon '" + triplet + "' at index " + juce::String (readIndex));
+                                         "Invalid codon '" + codon + "' at index " + juce::String (readIndex));
         return;
     }
 

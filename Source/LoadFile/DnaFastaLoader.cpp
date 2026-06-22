@@ -166,7 +166,7 @@ FileReadResult DnaFastaLoader::processFile(const juce::File &file, std::atomic<b
   }
 
   // We need a byte pointer so we can index efficiently by position, since totalFileContent.getData()
-  // returns a void* and does not provide indexable access; for triplet/codon scan, we must cast it.
+  // returns a void* and does not provide indexable access; for codon/codon scan, we must cast it.
   const unsigned char* fileContentByteSequence = static_cast<const unsigned char*>(totalFileContent.getData());
 
   //  Finalise: one `String` wrapping the totalFileContent (JS `chunks.join("")` already upper per byte)
@@ -177,7 +177,7 @@ FileReadResult DnaFastaLoader::processFile(const juce::File &file, std::atomic<b
   // the vector runs out of space it reallocates aImplicit conversion loses integer precision: 'size_t' (aka 'unsigned long') to 'int'nd copies existing indices;
   fileReadResult.startCodonMap.reserve(250000);
 
-  // Loop over the totalFileContent in triplets
+  // Loop over the totalFileContent in nucleotide triplets 
   for (size_t i = 0; i + 2 < finalLengthOfReadChunks; i += 3) {
     if (fileContentByteSequence[i] == 'A' && fileContentByteSequence[i + 1] == 'T' && fileContentByteSequence[i + 2] == 'G') {
       fileReadResult.startCodonMap.push_back(static_cast<std::int64_t>(i));

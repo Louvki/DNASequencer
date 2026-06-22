@@ -47,10 +47,6 @@
               file="Source/DataStructures/MidiScales.h"/>
         <FILE id="MIDSCB" name="MidiScales.cpp" compile="1" resource="0"
               file="Source/DataStructures/MidiScales.cpp"/>
-        <FILE id="AATRPH" name="AminoAcidTripletMap.h" compile="0" resource="0"
-              file="Source/DataStructures/AminoAcidTripletMap.h"/>
-        <FILE id="AATRPC" name="AminoAcidTripletMap.cpp" compile="1" resource="0"
-              file="Source/DataStructures/AminoAcidTripletMap.cpp"/>
         <FILE id="AMINOH" name="AminoAcids.h" compile="0" resource="0"
               file="Source/DataStructures/AminoAcids.h"/>
         <FILE id="AMINOC" name="AminoAcids.cpp" compile="1" resource="0"

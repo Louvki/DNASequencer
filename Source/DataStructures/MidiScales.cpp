@@ -124,7 +124,7 @@ std::vector<AminoAcid> applyScaleToAminoAcids (int rootNote, MidiScale scale, in
         availableNotes.resize ((size_t) limit);
 
     for (size_t i = 0; i < aminoAcids.size(); ++i)
-        aminoAcids[i].tripletNoteValue = availableNotes[i % availableNotes.size()];
+        aminoAcids[i].codonNoteValue = availableNotes[i % availableNotes.size()];
 
     return aminoAcids;
 }

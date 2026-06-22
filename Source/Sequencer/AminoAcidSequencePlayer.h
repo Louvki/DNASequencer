@@ -7,7 +7,7 @@
 
 #include <JuceHeader.h>
 
-#include "DataStructures/AminoAcidTripletMap.h"
+#include "DataStructures/AminoAcids.h"
 #include "Sequencer/MidiClockTickListener.h"
 #include "DataStructures/MidiScales.h"
 
@@ -32,7 +32,7 @@ public:
     void setNoteDurationMs (int durationMs) noexcept;
     void setSustainEnabled (bool enabled) noexcept;
 
-    void rebuildTripletMap();
+    void rebuildCodonMap();
     void resetReadPosition();
     void stopActiveNote();
 
@@ -54,14 +54,14 @@ private:
     void sendNoteOff (int note);
     void timerCallback() override;
     static bool isIndexInStartMap (int index, const std::vector<std::int64_t>& startMap) noexcept;
-    static juce::String readTripletAt (const juce::String& dna, int index);
+    static juce::String readCodonAt (const juce::String& dna, int index);
 
     juce::MidiOutput* midiOutput = nullptr;
     DnaSequenceProvider dnaSequenceProvider;
     StartCodonMapProvider startCodonMapProvider;
     SequenceRevisionProvider sequenceRevisionProvider;
 
-    dna::AminoAcidTripletMap tripletMap;
+    dna::AminoAcids codonMap;
 
     int rootNote = 60;
     dna::MidiScale scale = dna::MidiScale::majorIonian;

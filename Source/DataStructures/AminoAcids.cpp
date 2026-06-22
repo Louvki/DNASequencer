@@ -2,6 +2,7 @@
 
 namespace dna
 {
+
 const std::vector<AminoAcid>& getAminoAcids()
 {
     static const std::vector<AminoAcid> aminoAcids
@@ -29,5 +30,31 @@ const std::vector<AminoAcid>& getAminoAcids()
     };
 
     return aminoAcids;
+}
+
+void AminoAcids::rebuildFromScaledAminoAcids (const std::vector<AminoAcid>& scaledAminoAcids)
+{
+    codonToPlayback.clear();
+
+    for (const auto& aminoAcid : scaledAminoAcids)
+    {
+        for (const auto& codon : aminoAcid.codons)
+            codonToPlayback[juce::String (codon)] = { aminoAcid.codonNoteValue, aminoAcid.codonNoteVelocity };
+    }
+}
+
+// Finds a codon based on its name "CGT" and returns note and velocity. 
+std::optional<CodonPlayback> AminoAcids::lookupCodon (const juce::String& codon) const
+{
+    const auto it = codonToPlayback.find (codon);
+    if (it == codonToPlayback.end())
+        return std::nullopt;
+
+    return it->second;
+}
+
+bool AminoAcids::isStopCodon (const juce::String& codon) const noexcept
+{
+    return codon == "TAA" || codon == "TAG" || codon == "TGA";
 }
 }

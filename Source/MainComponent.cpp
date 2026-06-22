@@ -47,6 +47,8 @@ MainComponent::~MainComponent()
 }
 
 //==============================================================================
+/* Opens the first MIDI output, registers AminoAcidSequencePlayer as a clock listener, 
+and forwards incoming MIDI: */
 void MainComponent::handleIncomingMidiMessage (juce::MidiInput*, const juce::MidiMessage& message)
 {
     handleTransportSideEffects (message);
