@@ -41,7 +41,7 @@ void AminoAcidSequencePlayer::setSustainEnabled (bool enabled) noexcept
 void AminoAcidSequencePlayer::rebuildCodonMap()
 {
     const auto scaled = dna::applyScaleToAminoAcids (rootNote, scale, notePoolSize);
-    codonMap.rebuildFromScaledAminoAcids (scaled);
+    codonMap.rebuildCodonMidiPlaybackMap (scaled);
 }
 
 void AminoAcidSequencePlayer::resetReadPosition()

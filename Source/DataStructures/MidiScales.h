@@ -29,7 +29,5 @@ juce::String getMidiScaleLabel (MidiScale scale);
 const std::vector<MidiScale>& getAllMidiScales();
 
 std::vector<int> buildScaleNotes (int rootNote, const std::vector<int>& scaleSteps);
-std::vector<dna::AminoAcid> applyScaleToAminoAcids (int rootNote,
-                                                    MidiScale scale,
-                                                    int notePoolSize);
+std::vector<dna::AminoAcid> applyScaleToAminoAcids (int rootNote, MidiScale scale, int notePoolSize);
 }

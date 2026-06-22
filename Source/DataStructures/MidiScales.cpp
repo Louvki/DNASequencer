@@ -87,13 +87,17 @@ const std::vector<MidiScale>& getAllMidiScales()
 std::vector<int> buildScaleNotes (int rootNote, const std::vector<int>& scaleSteps)
 {
     std::vector<int> notes;
-    int octave = 0;
+    int octave = 0; // 0 = root octave, 1 = +12 semitones, 2 = +24, ...
 
+    // Walk up octave by octave until an entire pass produces no notes in 0–127.
+    // Infinite loop; repeatedly executes the loop body until an explicit 'break' is reached
     for (;;)
     {
         std::vector<int> octaveNotes;
         octaveNotes.reserve (scaleSteps.size());
 
+
+        // Go over the scale steps for the current octave.
         for (const auto step : scaleSteps)
         {
             const auto note = rootNote + step + (octave * 12);
@@ -101,9 +105,11 @@ std::vector<int> buildScaleNotes (int rootNote, const std::vector<int>& scaleSte
                 octaveNotes.push_back (note);
         }
 
+        // climbed past 127 — nothing left to collect
         if (octaveNotes.empty())
-            break;
+            break; 
 
+        // Add up the notes and increase the octave
         notes.insert (notes.end(), octaveNotes.begin(), octaveNotes.end());
         ++octave;
     }
@@ -113,7 +119,7 @@ std::vector<int> buildScaleNotes (int rootNote, const std::vector<int>& scaleSte
 
 std::vector<AminoAcid> applyScaleToAminoAcids (int rootNote, MidiScale scale, int notePoolSize)
 {
-    auto aminoAcids = getAminoAcids();
+    auto aminoAcids = getDefaultAminoAcids();
     auto availableNotes = buildScaleNotes (rootNote, getScaleSteps (scale));
 
     if (availableNotes.empty())
