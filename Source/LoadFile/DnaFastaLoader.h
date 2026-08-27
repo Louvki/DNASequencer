@@ -25,6 +25,7 @@ public:
     /** Blocking; safe to call from a background thread. If non-null, `cancelRequested` is polled between chunks (cooperative abort). */
     static FileReadResult processFile (const juce::File& file, std::atomic<bool>* cancelRequested = nullptr);
     static juce::String truncateFileNameForDisplay (const juce::String& name);
+    static juce::String formatCountForDisplay (std::int64_t value);
 };
 
 }

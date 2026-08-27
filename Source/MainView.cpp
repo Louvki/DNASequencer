@@ -6,11 +6,10 @@ MainView::MainView (juce::MidiInputCallback& midiCallbackTarget,
                     MidiClockService& clockService,
                     AminoAcidSequencePlayer& sequencePlayer,
                     std::function<void()> resetReadPosition)
-    : onResetReadPosition (std::move (resetReadPosition)),
-      midiInputSelector (midiCallbackTarget),
-      playbackStatus (clockService, sequencePlayer),
+    : midiInputSelector (midiCallbackTarget),
+      playbackStatus (clockService, sequencePlayer, std::move (resetReadPosition)),
       aminoAcidPlaybackSettings (sequencePlayer, clockService),
-      sequenceFileLoader (onResetReadPosition)
+      sequenceFileLoader()
 {
     addAndMakeVisible (midiInputSelector);
     addAndMakeVisible (sequenceFileLoader);
@@ -27,7 +26,7 @@ void MainView::resized()
 {
     auto r = getLocalBounds().reduced (12);
     midiInputSelector.setBounds (r.removeFromTop (60));
-    sequenceFileLoader.setBounds (r.removeFromTop (116));
-    playbackStatus.setBounds (r.removeFromTop (40));
-    aminoAcidPlaybackSettings.setBounds (r.removeFromTop (166));
+    sequenceFileLoader.setBounds (r.removeFromTop (72));
+    playbackStatus.setBounds (r.removeFromTop (70));
+    aminoAcidPlaybackSettings.setBounds (r.removeFromTop (242));
 }

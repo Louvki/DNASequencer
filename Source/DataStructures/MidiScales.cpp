@@ -1,5 +1,7 @@
 #include "DataStructures/MidiScales.h"
 
+#include <algorithm>
+
 namespace dna
 {
 namespace
@@ -117,7 +119,29 @@ std::vector<int> buildScaleNotes (int rootNote, const std::vector<int>& scaleSte
     return notes;
 }
 
-std::vector<AminoAcid> applyScaleToAminoAcids (int rootNote, MidiScale scale, int notePoolSize)
+std::vector<int> buildDiatonicTriad (int note, int rootNote, MidiScale scale)
+{
+    const auto scaleNotes = buildScaleNotes (rootNote, getScaleSteps (scale));
+
+    const auto it = std::find (scaleNotes.begin(), scaleNotes.end(), note);
+    if (it == scaleNotes.end())
+        return { note };
+
+    const auto index = static_cast<size_t> (std::distance (scaleNotes.begin(), it));
+    std::vector<int> triad;
+    triad.reserve (3);
+    triad.push_back (scaleNotes[index]);
+
+    if (index + 2 < scaleNotes.size())
+        triad.push_back (scaleNotes[index + 2]);
+
+    if (index + 4 < scaleNotes.size())
+        triad.push_back (scaleNotes[index + 4]);
+
+    return triad;
+}
+
+std::vector<AminoAcid> applyScaleToAminoAcids (int rootNote, MidiScale scale, int notePoolSize, bool chordsEnabled)
 {
     auto aminoAcids = getDefaultAminoAcids();
     auto availableNotes = buildScaleNotes (rootNote, getScaleSteps (scale));
@@ -130,7 +154,15 @@ std::vector<AminoAcid> applyScaleToAminoAcids (int rootNote, MidiScale scale, in
         availableNotes.resize ((size_t) limit);
 
     for (size_t i = 0; i < aminoAcids.size(); ++i)
-        aminoAcids[i].codonNoteValue = availableNotes[i % availableNotes.size()];
+    {
+        const auto note = availableNotes[i % availableNotes.size()];
+        aminoAcids[i].codonNoteValue = note;
+
+        if (chordsEnabled)
+            aminoAcids[i].codonChordNotes = buildDiatonicTriad (note, rootNote, scale);
+        else
+            aminoAcids[i].codonChordNotes.clear();
+    }
 
     return aminoAcids;
 }

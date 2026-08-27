@@ -25,8 +25,6 @@ public:
     void resized() override;
 
 private:
-    std::function<void()> onResetReadPosition;
-
     MidiInputSelectorComponent midiInputSelector;
     PlaybackStatusComponent playbackStatus;
     AminoAcidPlaybackSettingsComponent aminoAcidPlaybackSettings;

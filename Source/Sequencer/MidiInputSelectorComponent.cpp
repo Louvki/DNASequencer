@@ -5,10 +5,8 @@ MidiInputSelectorComponent::MidiInputSelectorComponent (juce::MidiInputCallback&
     : callbackTarget (midiCallbackTarget)
 {
     midiInputLabel.attachToComponent (&midiInputBox, true);
-    statusLabel.setJustificationType (juce::Justification::centredLeft);
 
     addAndMakeVisible (midiInputBox);
-    addAndMakeVisible (statusLabel);
 
     midiInputBox.onChange = [this]
     {
@@ -94,5 +92,4 @@ void MidiInputSelectorComponent::selectMidiInputDevice (int deviceIndex)
     }
 
     midiInput->start();
-    statusLabel.setText ("Listening: " + devices[(size_t) deviceIndex].name, juce::dontSendNotification);
 }

@@ -13,7 +13,7 @@ MainComponent::MainComponent()
             })
 {
     addAndMakeVisible (view);
-    setSize (520, 480);
+    setSize (520, 508);
 
     aminoAcidSequencePlayer.setDnaSequenceProvider ([this]
     {

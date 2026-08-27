@@ -2,53 +2,131 @@
 #include "LoadFile/DnaFastaLoader.h"
 #include "ErrorReporting/ErrorLog.h"
 
+#include <functional>
+
+namespace
+{
+const auto kFileSelectedFillColour = juce::Colour (0xffA1EF8B);
+
+class FileDropAreaComponentImpl : public juce::Component,
+                                  public juce::FileDragAndDropTarget
+{
+public:
+    std::function<void()> onBrowseClicked;
+    std::function<void(const juce::File&)> onFileDropped;
+
+    void setFileSelected (bool selected)
+    {
+        if (fileSelected == selected)
+            return;
+
+        fileSelected = selected;
+        repaint();
+    }
+
+    void paint (juce::Graphics& g) override
+    {
+        auto bounds = getLocalBounds().toFloat().reduced (0.5f);
+
+        juce::Colour fillColour;
+        juce::Colour outlineColour;
+        juce::String labelText;
+
+        if (isDragOver)
+        {
+            fillColour = findColour (juce::TextButton::buttonOnColourId);
+            outlineColour = fillColour.contrasting (0.2f);
+            labelText = fileSelected ? "File selected" : "Select file or drop here";
+        }
+        else if (fileSelected)
+        {
+            fillColour = kFileSelectedFillColour.withAlpha (0.5f);
+            outlineColour = kFileSelectedFillColour;
+            labelText = "File selected";
+        }
+        else
+        {
+            fillColour = findColour (juce::TextButton::buttonColourId);
+            outlineColour = fillColour.contrasting (0.35f);
+            labelText = "Select file or drop here";
+        }
+
+        g.setColour (fillColour);
+        g.fillRoundedRectangle (bounds, 4.0f);
+        g.setColour (outlineColour);
+        g.drawRoundedRectangle (bounds, 4.0f, 1.0f);
+
+        g.setColour (findColour (juce::Label::textColourId));
+        g.setFont (juce::FontOptions (14.0f));
+        g.drawFittedText (labelText, getLocalBounds(), juce::Justification::centred, 2);
+    }
+
+    void mouseUp (const juce::MouseEvent& e) override
+    {
+        if (e.mouseWasClicked() && onBrowseClicked != nullptr)
+            onBrowseClicked();
+    }
+
+    bool isInterestedInFileDrag (const juce::StringArray& files) override
+    {
+        return files.size() == 1 && juce::File (files[0]).existsAsFile();
+    }
+
+    void fileDragEnter (const juce::StringArray&, int, int) override
+    {
+        isDragOver = true;
+        repaint();
+    }
+
+    void fileDragExit (const juce::StringArray&) override
+    {
+        isDragOver = false;
+        repaint();
+    }
+
+    void filesDropped (const juce::StringArray& files, int, int) override
+    {
+        isDragOver = false;
+        repaint();
+
+        if (files.size() == 1 && onFileDropped != nullptr)
+            onFileDropped (juce::File (files[0]));
+    }
+
+private:
+    bool isDragOver { false };
+    bool fileSelected { false };
+};
+} // namespace
+
+struct SequenceFileLoaderComponent::FileDropAreaComponent : FileDropAreaComponentImpl
+{
+};
+
 /* UI only: */
 
 //==============================================================================
 SequenceFileLoaderComponent::SequenceFileLoaderComponent()
-    : SequenceFileLoaderComponent (nullptr)
 {
+    fileDropArea = std::make_unique<FileDropAreaComponent>();
+    fileDropArea->onBrowseClicked = [this] { showFileBrowser(); };
+    fileDropArea->onFileDropped = [this] (const juce::File& file) { beginLoadFromFile (file); };
+    addAndMakeVisible (*fileDropArea);
+
+    addAndMakeVisible (statusLogLabel);
+    statusLogLabel.setJustificationType (juce::Justification::topLeft);
+    statusLogLabel.setFont (juce::FontOptions (13.0f));
+    statusLogLabel.setVisible (false);
 }
 
-SequenceFileLoaderComponent::SequenceFileLoaderComponent (std::function<void()> onResetClicked)
-    : onResetClicked_ (std::move (onResetClicked))
+void SequenceFileLoaderComponent::showFileBrowser()
 {
-    // File name label
-    addAndMakeVisible (fileNameLabel);
-    fileNameLabel.setJustificationType (juce::Justification::centredLeft);
-    fileNameLabel.setMinimumHorizontalScale (1.0f);
-    fileNameLabel.setText ("No file selected", juce::dontSendNotification);
-
-    // File loading... Etc
-    addAndMakeVisible (fileStatusLabel);
-    fileStatusLabel.setJustificationType (juce::Justification::centredLeft);
-    fileStatusLabel.setText ({}, juce::dontSendNotification);
-
-    addAndMakeVisible (openButton);
-    openButton.onClick = [this]
+    fileChooserHoldAlive_ = std::make_unique<juce::FileChooser> ("Select DNA/FASTA file", juce::File {}, "*");
+    const auto flags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles;
+    fileChooserHoldAlive_->launchAsync (flags, [this] (const juce::FileChooser& browser)
     {
-        // Keep the file chooser alive until the async callback returns (JUCE lifetime rule).
-        fileChooserHoldAlive_ = std::make_unique<juce::FileChooser> ("Select DNA/FASTA file", juce::File {}, "*");
-        const auto flags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles;
-        // Open the dialog and handle selected file
-        fileChooserHoldAlive_->launchAsync (flags, [this] (const juce::FileChooser& browser) { 
-            handleFileChooserResult (browser); 
-        });
-    };
-
-    addAndMakeVisible (resetButton);
-    resetButton.onClick = [this]
-    {
-        if (onResetClicked_ != nullptr)
-            onResetClicked_();
-    };
-    resetButton.setVisible (onResetClicked_ != nullptr);
-}
-
-void SequenceFileLoaderComponent::setOnResetClicked (std::function<void()> callback)
-{
-    onResetClicked_ = std::move (callback);
-    resetButton.setVisible (onResetClicked_ != nullptr);
+        handleFileChooserResult (browser);
+    });
 }
 
 // On destroy hook
@@ -62,16 +140,16 @@ SequenceFileLoaderComponent::~SequenceFileLoaderComponent()
 void SequenceFileLoaderComponent::resized()
 {
     auto r = getLocalBounds();
-    constexpr int kButtonHeight = 28;
-    constexpr int kButtonGap = 4;
-    const auto buttonWidth = juce::jmin (220, r.getWidth());
+    constexpr int kDropAreaHeight = 48;
+    constexpr int kDropAreaWidth = 180;
+    constexpr int kStatusLogGap = 10;
+    constexpr int kBottomMargin = 24;
 
-    openButton.setBounds (r.removeFromTop (kButtonHeight).withWidth (buttonWidth));
-    r.removeFromTop (kButtonGap);
-    resetButton.setBounds (r.removeFromTop (kButtonHeight).withWidth (juce::jmin (100, buttonWidth)));
-    r.removeFromTop (6);
-    fileNameLabel.setBounds (r.removeFromTop (22));
-    fileStatusLabel.setBounds (r.removeFromTop (22));
+    r.removeFromBottom (kBottomMargin);
+    auto row = r.removeFromTop (kDropAreaHeight);
+    fileDropArea->setBounds (row.removeFromLeft (juce::jmin (kDropAreaWidth, row.getWidth())));
+    row.removeFromLeft (kStatusLogGap);
+    statusLogLabel.setBounds (row);
 }
 
 juce::String SequenceFileLoaderComponent::getLoadedDnaSequence() const
@@ -237,34 +315,39 @@ void SequenceFileLoaderComponent::displayErrorInTheUi (juce::String error)
 
 void SequenceFileLoaderComponent::updateUiLabels()
 {
-    // Label writes must run on the message thread; we snapshot strings under `dataLock_` first.
-    juce::String fileShown;
-    juce::String errCopy;
-    juce::String successLine;
+    juce::String fileName;
+    juce::int64 sequenceLength = 0;
+    juce::int64 startCodonCount = 0;
+    bool hasLoadedData = false;
 
     const bool isReadingFile = isFileLoadInProgress_.load();
 
     {
         const juce::ScopedLock sl (dataLock_);
 
-        fileShown = displayedFileShortName_;
-        errCopy = lastError_;
+        fileName = displayedFileShortName_;
 
-        if (!isReadingFile && errCopy.isEmpty() && loadedDnaSequence_.isNotEmpty())
-            successLine = "Finished. Length: "
-                          + juce::String ((juce::int64) loadedDnaSequence_.length())
-                          + " bp, ATG codons: "
-                          + juce::String ((juce::int64) startCodonMap_.size());
+        if (! isReadingFile && lastError_.isEmpty() && loadedDnaSequence_.isNotEmpty())
+        {
+            hasLoadedData = true;
+            sequenceLength = loadedDnaSequence_.length();
+            startCodonCount = static_cast<juce::int64> (startCodonMap_.size());
+        }
     }
 
-    fileNameLabel.setText (fileShown, juce::dontSendNotification);
-
-    if (errCopy.isNotEmpty())
-        fileStatusLabel.setText ("Error: " + errCopy, juce::dontSendNotification);
-    else if (isReadingFile)
-        fileStatusLabel.setText ("Reading file...", juce::dontSendNotification);
-    else if (successLine.isNotEmpty())
-        fileStatusLabel.setText (successLine, juce::dontSendNotification);
+    if (hasLoadedData)
+    {
+        fileDropArea->setFileSelected (true);
+        statusLogLabel.setVisible (true);
+        statusLogLabel.setText ("Name:\t\t" + dna::DnaFastaLoader::truncateFileNameForDisplay (fileName)
+                                + "\nLength:\t\t" + dna::DnaFastaLoader::formatCountForDisplay (sequenceLength)
+                                + "\nStart Codons:\t" + dna::DnaFastaLoader::formatCountForDisplay (startCodonCount),
+                                juce::dontSendNotification);
+    }
     else
-        fileStatusLabel.setText ({}, juce::dontSendNotification);
+    {
+        fileDropArea->setFileSelected (false);
+        statusLogLabel.setVisible (false);
+        statusLogLabel.setText ({}, juce::dontSendNotification);
+    }
 }

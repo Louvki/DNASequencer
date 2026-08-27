@@ -8,8 +8,7 @@ namespace dna {
 /** 
 * HELPER:
 * One linear scan over a raw chunk: drop `>` lines, strip whitespace /
-* slashes, emit uppercase bases, record ATG offsets with the same per-chunk phase
-* as `readFile.js` (`totalChunkLength + i`). 
+* slashes, emit uppercase bases, convert U to T, record ATG offsets
 */
  void processChunkSinglePass(const char *data, size_t currentChunk, juce::MemoryOutputStream &totalFileContent)
  {                              
@@ -81,9 +80,22 @@ namespace dna {
 
 
 // truncateFileNameForDisplay
-juce::String DnaFastaLoader::truncateFileNameForDisplay(const juce::String &name) {
-  if (name.length() <= 20) { return name; }
-  return name.substring(0, 20) + "...";
+juce::String DnaFastaLoader::truncateFileNameForDisplay (const juce::String& name)
+{
+    constexpr int maxLen = 32;
+
+    if (name.length() <= maxLen)
+        return name;
+
+    return name.substring (0, maxLen) + juce::String::charToString (0x2026);
+}
+
+juce::String DnaFastaLoader::formatCountForDisplay (std::int64_t value)
+{
+    if (value >= 10000)
+        return juce::String (value / 1000) + "K";
+
+    return juce::String (value);
 }
 
 // Process file

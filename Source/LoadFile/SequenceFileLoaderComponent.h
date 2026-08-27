@@ -4,7 +4,6 @@
 
 #include <atomic>
 #include <cstdint>
-#include <functional>
 #include <memory>
 #include <thread>
 #include <vector>
@@ -14,10 +13,8 @@ class SequenceFileLoaderComponent : public juce::Component
 {
 public:
     SequenceFileLoaderComponent();
-    explicit SequenceFileLoaderComponent (std::function<void()> onResetClicked);
     ~SequenceFileLoaderComponent() override;
 
-    void setOnResetClicked (std::function<void()> callback);
     void resized() override;
 
     /** Full cleaned sequence (`chunks.join("")` then uppercased); empty until load finishes. */
@@ -28,6 +25,7 @@ public:
     std::uint32_t getSequenceRevision() const noexcept { return sequenceRevision_.load (std::memory_order_acquire); }
 
 private:
+    void showFileBrowser();
     void handleFileChooserResult (const juce::FileChooser& browser);
     void joinLoadThread();
     void beginLoadFromFile (const juce::File& file);
@@ -36,14 +34,11 @@ private:
     void displayErrorInTheUi (juce::String error);
     void updateUiLabels();
 
-    juce::TextButton openButton { "Select file" };
-    juce::TextButton resetButton { "Reset" };
-    juce::Label fileNameLabel;
-    juce::Label fileStatusLabel;
+    struct FileDropAreaComponent;
+    std::unique_ptr<FileDropAreaComponent> fileDropArea;
+    juce::Label statusLogLabel;
     juce::String displayedFileShortName_ { "No file selected" };
     juce::String lastError_; // Used for displauying the error in the UI
-
-    std::function<void()> onResetClicked_;
 
     mutable juce::CriticalSection dataLock_; // Guards fields read by getters + `updateUiLabels` from the GUI.
 

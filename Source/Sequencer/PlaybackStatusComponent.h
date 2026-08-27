@@ -2,6 +2,8 @@
 
 #include <JuceHeader.h>
 
+#include <functional>
+
 #include "Sequencer/AminoAcidSequencePlayer.h"
 #include "Sequencer/MidiClockService.h"
 
@@ -11,7 +13,8 @@ class PlaybackStatusComponent : public juce::Component,
 {
 public:
     PlaybackStatusComponent (MidiClockService& clockService,
-                             AminoAcidSequencePlayer& sequencePlayer);
+                             AminoAcidSequencePlayer& sequencePlayer,
+                             std::function<void()> onResetClicked = nullptr);
 
     void paint (juce::Graphics& g) override;
     void resized() override;
@@ -24,12 +27,16 @@ private:
     AminoAcidSequencePlayer& sequencePlayer;
 
     juce::Label clockStatusLabel;
-    juce::Label readIndexLabel;
+    juce::Label scanProgressLabel;
 
     juce::TextButton playButton { "Play" };
     juce::TextButton pauseButton { "Pause" };
+    juce::TextButton resetButton { "Reset" };
+
+    std::function<void()> onResetClicked;
 
     juce::Colour ledColour { juce::Colours::grey };
+    juce::Rectangle<int> ledBounds;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PlaybackStatusComponent)
 };

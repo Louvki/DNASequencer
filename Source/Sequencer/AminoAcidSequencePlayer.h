@@ -28,6 +28,7 @@ public:
     void setRootNote (int note) noexcept;
     void setScale (dna::MidiScale scale) noexcept;
     void setNotePoolSize (int size) noexcept;
+    void setChordsEnabled (bool enabled) noexcept;
     void setWhiteSpaceReadSpeed (int speed) noexcept;
     void setNoteDurationMs (int durationMs) noexcept;
     void setSustainEnabled (bool enabled) noexcept;
@@ -37,6 +38,7 @@ public:
     void stopActiveNote();
 
     int getCurrentReadIndex() const noexcept { return currentReadIndex.load (std::memory_order_acquire); }
+    int getSequenceLength();
     bool isReadingCodons() const noexcept { return isReadingCodonsFlag.load (std::memory_order_acquire); }
 
     void onMidiClockTick() override;
@@ -49,7 +51,7 @@ private:
     void checkSequenceReload();
     void advanceWhitespaceMode();
     void advanceCodonMode();
-    void playNote (int note, int velocity);
+    void playNotes (const std::vector<int>& notes, int velocity);
     void scheduleNoteOff (int note);
     void sendNoteOff (int note);
     void timerCallback() override;
@@ -66,10 +68,11 @@ private:
     int rootNote = 60;
     dna::MidiScale scale = dna::MidiScale::majorIonian;
     int notePoolSize = 20;
+    bool chordsEnabled = false;
     int whiteSpaceReadSpeed = 15;
     int noteDurationMs = 100;
     bool sustainEnabled = false;
-    int activeSustainNote = -1;
+    std::vector<int> activeSustainNotes;
 
     struct ScheduledNoteOff
     {

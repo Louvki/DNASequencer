@@ -27,11 +27,12 @@ struct AminoAcid
     std::vector<int> codonChordNotes {};
 };
 
-/** MIDI note and velocity assigned to a DNA codon codon. */
+/** MIDI note and velocity assigned to a DNA codon. */
 struct MidiMessage
 {
     int note = 0;
     int velocity = 127;
+    std::vector<int> chordNotes;
 };
 
 /** Returns the canonical table of all 20 amino acids and their codons. */
@@ -52,6 +53,6 @@ public:
 
 private:
     /** A lookup map containing note and velocity for each DNA codone  */
-    std::unordered_map<juce::String, CodonPlayback> codonMidiPlaybackMap;
+    std::unordered_map<juce::String, MidiMessage> codonMidiPlaybackMap;
 };
 }

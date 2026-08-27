@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="sCFyhB" name="DNASequencer" projectType="guiapp" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" headerPath="../../Source"
+              postExportShellCommandPosix="%%1%%/Resources/update_macos_icon.sh">
   <MAINGROUP id="vqwnuo" name="DNASequencer">
     <GROUP id="{058FFDB9-81D5-C674-2CAE-C1D66207609F}" name="Source">
       <FILE id="Iw7QCc" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
@@ -69,6 +70,12 @@
               file="Source/ErrorReporting/ErrorLog.cpp"/>
       </GROUP>
     </GROUP>
+    <GROUP id="RESGRP1" name="Resources">
+      <FILE id="APPIC0" name="fungi-cluster.png" compile="0" resource="0" file="Resources/fungi-cluster.png"/>
+      <FILE id="APPIC1" name="AppIcon512.png" compile="0" resource="0" file="Resources/AppIcon512.png"/>
+      <FILE id="APPIC2" name="AppIcon1024.png" compile="0" resource="0" file="Resources/AppIcon1024.png"/>
+      <FILE id="APPIC3" name="update_macos_icon.sh" compile="0" resource="0" file="Resources/update_macos_icon.sh"/>
+    </GROUP>
     <GROUP id="ARCHV1" name="Archive">
       <FILE id="DNAPLH" name="DnaSequencePlayer.h" compile="0" resource="0"
             file="Source/Archive/DnaSequencePlayer.h"/>
@@ -91,7 +98,8 @@
   </MODULES>
   <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1"/>
   <EXPORTFORMATS>
-    <XCODE_MAC targetFolder="Builds/MacOSX">
+    <XCODE_MAC targetFolder="Builds/MacOSX" smallIcon="APPIC1"
+               bigIcon="APPIC2">
       <CONFIGURATIONS>
         <CONFIGURATION isDebug="1" name="Debug" targetName="DNASequencer"/>
         <CONFIGURATION isDebug="0" name="Release" targetName="DNASequencer"/>

@@ -23,6 +23,12 @@ void AminoAcidSequencePlayer::setNotePoolSize (int size) noexcept
     rebuildCodonMap();
 }
 
+void AminoAcidSequencePlayer::setChordsEnabled (bool enabled) noexcept
+{
+    chordsEnabled = enabled;
+    rebuildCodonMap();
+}
+
 void AminoAcidSequencePlayer::setWhiteSpaceReadSpeed (int speed) noexcept
 {
     whiteSpaceReadSpeed = juce::jmax (1, speed);
@@ -30,7 +36,7 @@ void AminoAcidSequencePlayer::setWhiteSpaceReadSpeed (int speed) noexcept
 
 void AminoAcidSequencePlayer::setNoteDurationMs (int durationMs) noexcept
 {
-    noteDurationMs = juce::jlimit (1, 1000, durationMs);
+    noteDurationMs = juce::jlimit (1, 3000, durationMs);
 }
 
 void AminoAcidSequencePlayer::setSustainEnabled (bool enabled) noexcept
@@ -40,8 +46,14 @@ void AminoAcidSequencePlayer::setSustainEnabled (bool enabled) noexcept
 
 void AminoAcidSequencePlayer::rebuildCodonMap()
 {
-    const auto scaled = dna::applyScaleToAminoAcids (rootNote, scale, notePoolSize);
-    codonMap.rebuildCodonMidiPlaybackMap (scaled);
+    const auto aminoAcidsWithScaleApplied = dna::applyScaleToAminoAcids (rootNote, scale, notePoolSize, chordsEnabled);
+    codonMap.rebuildCodonMidiPlaybackMap (aminoAcidsWithScaleApplied);
+}
+
+int AminoAcidSequencePlayer::getSequenceLength()
+{
+    checkSequenceReload();
+    return cachedDna.length();
 }
 
 void AminoAcidSequencePlayer::resetReadPosition()
@@ -51,7 +63,7 @@ void AminoAcidSequencePlayer::resetReadPosition()
     syncStartMapTrunc();
 
     const juce::ScopedLock sl (noteStateLock);
-    activeSustainNote = -1;
+    activeSustainNotes.clear();
 }
 
 void AminoAcidSequencePlayer::stopActiveNote()
@@ -71,43 +83,57 @@ void AminoAcidSequencePlayer::stopActiveNote()
 
         scheduledNoteOffs.clear();
 
-        if (activeSustainNote >= 0)
-            notesToStop.push_back (activeSustainNote);
+        if (activeSustainNotes.empty())
+            return;
 
-        activeSustainNote = -1;
+        notesToStop.insert (notesToStop.end(), activeSustainNotes.begin(), activeSustainNotes.end());
+        activeSustainNotes.clear();
     }
 
     for (const auto note : notesToStop)
         midiOutput->sendMessageNow (juce::MidiMessage::noteOff (1, note));
 }
 
-void AminoAcidSequencePlayer::playNote (int note, int velocity)
+void AminoAcidSequencePlayer::playNotes (const std::vector<int>& notes, int velocity)
 {
-    if (midiOutput == nullptr)
+    if (midiOutput == nullptr || notes.empty())
         return;
 
     if (sustainEnabled)
     {
         const juce::ScopedLock sl (noteStateLock);
 
-        if (note == activeSustainNote)
+        const bool sameNotes = (int) activeSustainNotes.size() == (int) notes.size()
+                               && std::equal (activeSustainNotes.begin(), activeSustainNotes.end(), notes.begin());
+
+        if (sameNotes)
             return;
 
-        if (activeSustainNote >= 0)
-            sendNoteOff (activeSustainNote);
+        for (const auto note : activeSustainNotes)
+            sendNoteOff (note);
 
-        midiOutput->sendMessageNow (juce::MidiMessage::noteOn (1, note, (juce::uint8) velocity));
-        activeSustainNote = note;
+        for (const auto note : notes)
+            midiOutput->sendMessageNow (juce::MidiMessage::noteOn (1, note, (juce::uint8) velocity));
+
+        activeSustainNotes = notes;
         return;
     }
 
-    midiOutput->sendMessageNow (juce::MidiMessage::noteOn (1, note, (juce::uint8) velocity));
-    scheduleNoteOff (note);
+    for (const auto note : notes)
+    {
+        midiOutput->sendMessageNow (juce::MidiMessage::noteOn (1, note, (juce::uint8) velocity));
+        scheduleNoteOff (note);
+    }
 }
 
 void AminoAcidSequencePlayer::scheduleNoteOff (int note)
 {
     const juce::ScopedLock sl (noteStateLock);
+
+    scheduledNoteOffs.erase (
+        std::remove_if (scheduledNoteOffs.begin(), scheduledNoteOffs.end(),
+                        [note] (const ScheduledNoteOff& scheduled) { return scheduled.note == note; }),
+        scheduledNoteOffs.end());
 
     scheduledNoteOffs.push_back ({
         note,
@@ -259,7 +285,8 @@ void AminoAcidSequencePlayer::advanceCodonMode()
     if (codonMap.isStopCodon (codon))
     {
         isReadingCodonsFlag.store (false, std::memory_order_release);
-        stopActiveNote();
+        if (sustainEnabled)
+            stopActiveNote();
         return;
     }
 
@@ -271,7 +298,11 @@ void AminoAcidSequencePlayer::advanceCodonMode()
         return;
     }
 
-    playNote (playback->note, playback->velocity);
+    const auto notes = playback->chordNotes.empty()
+                           ? std::vector<int> { playback->note }
+                           : playback->chordNotes;
+
+    playNotes (notes, playback->velocity);
 }
 
 void AminoAcidSequencePlayer::onMidiClockTick()

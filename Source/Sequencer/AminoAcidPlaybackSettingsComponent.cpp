@@ -13,6 +13,8 @@ constexpr int kLabelOverlap = 10;
 constexpr int kTitleGap = 2;
 constexpr int kScaleBoxWidth = 180;
 constexpr int kDivisionBoxWidth = 100;
+constexpr int kSliderRowBottomMargin = 24;
+constexpr int kDropdownRowBottomMargin = 12;
 
 constexpr int kRotaryColumnHeight = kTitleHeight + kKnobSize + kValueHeight - (2 * kLabelOverlap) + kTitleGap;
 const auto kDurationFillColour = juce::Colour (0xffA1EF8B);
@@ -130,7 +132,7 @@ AminoAcidPlaybackSettingsComponent::AminoAcidPlaybackSettingsComponent (AminoAci
     setupRotarySlider (noteDurationSlider);
     addAndMakeVisible (noteDurationValueLabel);
     setupValueLabel (noteDurationValueLabel);
-    noteDurationSlider.setRange (1, 1000, 1);
+    noteDurationSlider.setRange (1, 3000, 1);
     noteDurationSlider.setValue (100, juce::dontSendNotification);
     noteDurationSlider.textFromValueFunction = [] (double value)
     {
@@ -152,6 +154,12 @@ AminoAcidPlaybackSettingsComponent::AminoAcidPlaybackSettingsComponent (AminoAci
         applySettingsToPlayer();
     };
 
+    setupLabel (chordsLabel, "Chords");
+    addAndMakeVisible (chordsLabel);
+    addAndMakeVisible (chordsToggle);
+    chordsToggle.setToggleState (false, juce::dontSendNotification);
+    chordsToggle.onClick = [this] { applySettingsToPlayer(); };
+
     updateDurationControlAppearance();
     updateSliderValueLabels();
     applySettingsToPlayer();
@@ -165,13 +173,17 @@ void AminoAcidPlaybackSettingsComponent::resized()
     const auto columnWidth = slidersRow.getWidth() / 4;
 
     layoutRotaryColumn (rootNoteLabel, rootNoteSlider, rootNoteValueLabel, slidersRow.removeFromLeft (columnWidth));
-    layoutRotaryColumn (notePoolLabel, notePoolSlider, notePoolValueLabel, slidersRow.removeFromLeft (columnWidth));
+    layoutRotaryColumn (noteDurationLabel, noteDurationSlider, noteDurationValueLabel, slidersRow.removeFromLeft (columnWidth));
     layoutRotaryColumn (whitespaceLabel, whitespaceSlider, whitespaceValueLabel, slidersRow.removeFromLeft (columnWidth));
-    layoutRotaryColumn (noteDurationLabel, noteDurationSlider, noteDurationValueLabel, slidersRow);
+    layoutRotaryColumn (notePoolLabel, notePoolSlider, notePoolValueLabel, slidersRow);
+    r.removeFromTop (kSliderRowBottomMargin);
 
     scaleBox.setBounds (r.removeFromTop (kRowHeight).removeFromLeft (kScaleBoxWidth));
+    r.removeFromTop (kDropdownRowBottomMargin);
     clockDivisionSelector.setBounds (r.removeFromTop (kRowHeight).removeFromLeft (kDivisionBoxWidth));
+    r.removeFromTop (kDropdownRowBottomMargin);
     layoutLabelledRow (sustainLabel, sustainToggle, r.removeFromTop (kRowHeight));
+    layoutLabelledRow (chordsLabel, chordsToggle, r.removeFromTop (kRowHeight));
 }
 
 void AminoAcidPlaybackSettingsComponent::populateScaleList()
@@ -227,4 +239,5 @@ void AminoAcidPlaybackSettingsComponent::applySettingsToPlayer()
     sequencePlayer.setWhiteSpaceReadSpeed ((int) whitespaceSlider.getValue());
     sequencePlayer.setNoteDurationMs ((int) noteDurationSlider.getValue());
     sequencePlayer.setSustainEnabled (sustainToggle.getToggleState());
+    sequencePlayer.setChordsEnabled (chordsToggle.getToggleState());
 }

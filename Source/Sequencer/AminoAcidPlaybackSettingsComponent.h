@@ -44,5 +44,8 @@ private:
     juce::Label sustainLabel;
     juce::ToggleButton sustainToggle;
 
+    juce::Label chordsLabel;
+    juce::ToggleButton chordsToggle;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AminoAcidPlaybackSettingsComponent)
 };
