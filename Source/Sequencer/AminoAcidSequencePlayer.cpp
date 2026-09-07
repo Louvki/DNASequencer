@@ -23,10 +23,26 @@ void AminoAcidSequencePlayer::setNotePoolSize (int size) noexcept
     rebuildCodonMap();
 }
 
-void AminoAcidSequencePlayer::setChordsEnabled (bool enabled) noexcept
+void AminoAcidSequencePlayer::setChordChancePercent (int percent) noexcept
 {
-    chordsEnabled = enabled;
-    rebuildCodonMap();
+    chordChancePercent = juce::jlimit (0, 100, percent);
+}
+
+void AminoAcidSequencePlayer::setChordTypeWeight (dna::ChordType type, int weight) noexcept
+{
+    const auto index = static_cast<size_t> (type);
+    if (index < chordTypeWeights.size())
+        chordTypeWeights[index] = juce::jlimit (0, 100, weight);
+}
+
+void AminoAcidSequencePlayer::setChordStrumMaxMs (int maxMs) noexcept
+{
+    chordStrumMaxMs = juce::jlimit (0, 200, maxMs);
+}
+
+void AminoAcidSequencePlayer::setChordVelocityRange (int range) noexcept
+{
+    chordVelocityRange = juce::jlimit (0, 64, range);
 }
 
 void AminoAcidSequencePlayer::setWhiteSpaceReadSpeed (int speed) noexcept
@@ -46,7 +62,7 @@ void AminoAcidSequencePlayer::setSustainEnabled (bool enabled) noexcept
 
 void AminoAcidSequencePlayer::rebuildCodonMap()
 {
-    const auto aminoAcidsWithScaleApplied = dna::applyScaleToAminoAcids (rootNote, scale, notePoolSize, chordsEnabled);
+    const auto aminoAcidsWithScaleApplied = dna::applyScaleToAminoAcids (rootNote, scale, notePoolSize);
     codonMap.rebuildCodonMidiPlaybackMap (aminoAcidsWithScaleApplied);
 }
 
@@ -64,6 +80,7 @@ void AminoAcidSequencePlayer::resetReadPosition()
 
     const juce::ScopedLock sl (noteStateLock);
     activeSustainNotes.clear();
+    scheduledNoteOns.clear();
 }
 
 void AminoAcidSequencePlayer::stopActiveNote()
@@ -82,9 +99,7 @@ void AminoAcidSequencePlayer::stopActiveNote()
             notesToStop.push_back (scheduled.note);
 
         scheduledNoteOffs.clear();
-
-        if (activeSustainNotes.empty())
-            return;
+        scheduledNoteOns.clear();
 
         notesToStop.insert (notesToStop.end(), activeSustainNotes.begin(), activeSustainNotes.end());
         activeSustainNotes.clear();
@@ -99,6 +114,18 @@ void AminoAcidSequencePlayer::playNotes (const std::vector<int>& notes, int velo
     if (midiOutput == nullptr || notes.empty())
         return;
 
+    const bool isChord = notes.size() > 1;
+    const bool useStrum = isChord && chordStrumMaxMs > 0;
+
+    const auto velocityFor = [&] (size_t index)
+    {
+        if (! isChord || chordVelocityRange <= 0)
+            return velocity;
+
+        juce::ignoreUnused (index);
+        return randomizeChordVelocity (velocity);
+    };
+
     if (sustainEnabled)
     {
         const juce::ScopedLock sl (noteStateLock);
@@ -112,18 +139,129 @@ void AminoAcidSequencePlayer::playNotes (const std::vector<int>& notes, int velo
         for (const auto note : activeSustainNotes)
             sendNoteOff (note);
 
-        for (const auto note : notes)
-            midiOutput->sendMessageNow (juce::MidiMessage::noteOn (1, note, (juce::uint8) velocity));
-
+        scheduledNoteOns.clear();
         activeSustainNotes = notes;
+
+        if (! useStrum)
+        {
+            for (size_t i = 0; i < notes.size(); ++i)
+                sendNoteOn (notes[i], velocityFor (i));
+        }
+        else
+        {
+            const auto now = juce::Time::getMillisecondCounter();
+
+            for (size_t i = 0; i < notes.size(); ++i)
+            {
+                const auto delayMs = static_cast<std::uint32_t> (strumRandom.nextInt (chordStrumMaxMs + 1));
+                scheduledNoteOns.push_back ({
+                    notes[i],
+                    velocityFor (i),
+                    now + delayMs,
+                    false
+                });
+            }
+
+            if (! isTimerRunning())
+                startTimer (5);
+        }
+
         return;
     }
 
-    for (const auto note : notes)
+    if (! useStrum)
     {
-        midiOutput->sendMessageNow (juce::MidiMessage::noteOn (1, note, (juce::uint8) velocity));
-        scheduleNoteOff (note);
+        for (size_t i = 0; i < notes.size(); ++i)
+        {
+            sendNoteOn (notes[i], velocityFor (i));
+            scheduleNoteOff (notes[i]);
+        }
+
+        return;
     }
+
+    for (size_t i = 0; i < notes.size(); ++i)
+        scheduleNoteOn (notes[i], velocityFor (i), strumRandom.nextInt (chordStrumMaxMs + 1), true);
+}
+
+int AminoAcidSequencePlayer::randomizeChordVelocity (int baseVelocity) const noexcept
+{
+    if (chordVelocityRange <= 0)
+        return baseVelocity;
+
+    const auto offset = strumRandom.nextInt (chordVelocityRange * 2 + 1) - chordVelocityRange;
+    return juce::jlimit (1, 127, baseVelocity + offset);
+}
+
+dna::ChordType AminoAcidSequencePlayer::pickWeightedChordType() const noexcept
+{
+    int totalWeight = 0;
+
+    for (const auto weight : chordTypeWeights)
+        totalWeight += juce::jmax (0, weight);
+
+    if (totalWeight <= 0)
+        return dna::ChordType::triad;
+
+    auto roll = strumRandom.nextInt (totalWeight);
+
+    for (size_t i = 0; i < chordTypeWeights.size(); ++i)
+    {
+        const auto weight = juce::jmax (0, chordTypeWeights[i]);
+        if (weight <= 0)
+            continue;
+
+        if (roll < weight)
+            return static_cast<dna::ChordType> (i);
+
+        roll -= weight;
+    }
+
+    return dna::ChordType::triad;
+}
+
+std::vector<int> AminoAcidSequencePlayer::resolvePlaybackNotes (int baseNote)
+{
+    if (chordChancePercent <= 0)
+        return { baseNote };
+
+    if (chordChancePercent < 100 && strumRandom.nextInt (100) >= chordChancePercent)
+        return { baseNote };
+
+    return dna::buildDiatonicChord (baseNote, rootNote, scale, pickWeightedChordType());
+}
+
+void AminoAcidSequencePlayer::sendNoteOn (int note, int velocity)
+{
+    if (midiOutput == nullptr)
+        return;
+
+    midiOutput->sendMessageNow (juce::MidiMessage::noteOn (1, note, (juce::uint8) velocity));
+}
+
+void AminoAcidSequencePlayer::scheduleNoteOn (int note, int velocity, int delayMs, bool scheduleOffAfter)
+{
+    if (delayMs <= 0)
+    {
+        sendNoteOn (note, velocity);
+
+        if (scheduleOffAfter)
+            scheduleNoteOff (note);
+
+        return;
+    }
+
+    const juce::ScopedLock sl (noteStateLock);
+
+    scheduledNoteOns.push_back ({
+        note,
+        velocity,
+        juce::Time::getMillisecondCounter() + static_cast<std::uint32_t> (delayMs),
+        scheduleOffAfter
+    });
+
+    if (! isTimerRunning())
+        startTimer (5);
 }
 
 void AminoAcidSequencePlayer::scheduleNoteOff (int note)
@@ -158,10 +296,20 @@ void AminoAcidSequencePlayer::timerCallback()
         return;
 
     const auto now = juce::Time::getMillisecondCounter();
+    std::vector<ScheduledNoteOn> notesToStart;
     std::vector<int> notesToStop;
 
     {
         const juce::ScopedLock sl (noteStateLock);
+
+        for (int i = (int) scheduledNoteOns.size() - 1; i >= 0; --i)
+        {
+            if (scheduledNoteOns[(size_t) i].onAtMs > now)
+                continue;
+
+            notesToStart.push_back (scheduledNoteOns[(size_t) i]);
+            scheduledNoteOns.erase (scheduledNoteOns.begin() + i);
+        }
 
         for (int i = (int) scheduledNoteOffs.size() - 1; i >= 0; --i)
         {
@@ -172,8 +320,16 @@ void AminoAcidSequencePlayer::timerCallback()
             scheduledNoteOffs.erase (scheduledNoteOffs.begin() + i);
         }
 
-        if (scheduledNoteOffs.empty())
+        if (scheduledNoteOns.empty() && scheduledNoteOffs.empty())
             stopTimer();
+    }
+
+    for (const auto& scheduled : notesToStart)
+    {
+        sendNoteOn (scheduled.note, scheduled.velocity);
+
+        if (scheduled.scheduleOffAfter)
+            scheduleNoteOff (scheduled.note);
     }
 
     for (const auto note : notesToStop)
@@ -298,9 +454,7 @@ void AminoAcidSequencePlayer::advanceCodonMode()
         return;
     }
 
-    const auto notes = playback->chordNotes.empty()
-                           ? std::vector<int> { playback->note }
-                           : playback->chordNotes;
+    const auto notes = resolvePlaybackNotes (playback->note);
 
     playNotes (notes, playback->velocity);
 }

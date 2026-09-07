@@ -28,5 +28,5 @@ void MainView::resized()
     midiInputSelector.setBounds (r.removeFromTop (60));
     sequenceFileLoader.setBounds (r.removeFromTop (72));
     playbackStatus.setBounds (r.removeFromTop (70));
-    aminoAcidPlaybackSettings.setBounds (r.removeFromTop (242));
+    aminoAcidPlaybackSettings.setBounds (r.removeFromTop (454));
 }

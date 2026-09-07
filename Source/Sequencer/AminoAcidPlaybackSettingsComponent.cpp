@@ -6,6 +6,8 @@ namespace
 {
 constexpr int kLabelWidth = 110;
 constexpr int kRowHeight = 28;
+constexpr int kSectionLabelHeight = 16;
+constexpr int kShareLabelWidth = 48;
 constexpr int kTitleHeight = 14;
 constexpr int kKnobSize = 72;
 constexpr int kValueHeight = 14;
@@ -20,6 +22,8 @@ constexpr int kRotaryColumnHeight = kTitleHeight + kKnobSize + kValueHeight - (2
 const auto kDurationFillColour = juce::Colour (0xffA1EF8B);
 constexpr float kDisabledAlpha = 0.5f;
 
+constexpr std::array<const char*, 5> kChordTypeLabels { "Triads", "7ths", "9ths", "11ths", "13ths" };
+
 void setupRotarySlider (juce::Slider& slider)
 {
     slider.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
@@ -29,6 +33,17 @@ void setupRotarySlider (juce::Slider& slider)
                                 true);
     slider.setColour (juce::Slider::thumbColourId, juce::Colours::transparentBlack);
     slider.setColour (juce::Slider::rotarySliderFillColourId, juce::Colour (0xffA1EF8B));
+}
+
+void setupPercentSlider (juce::Slider& slider)
+{
+    slider.setSliderStyle (juce::Slider::LinearHorizontal);
+    slider.setTextBoxStyle (juce::Slider::TextBoxRight, false, 44, 20);
+    slider.setRange (0, 100, 1);
+    slider.textFromValueFunction = [] (double value)
+    {
+        return juce::String ((int) value) + " %";
+    };
 }
 
 void setupTitleLabel (juce::Label& label, const juce::String& text)
@@ -48,6 +63,17 @@ void layoutLabelledRow (juce::Label& label, juce::Component& control, juce::Rect
 {
     label.setBounds (row.removeFromLeft (kLabelWidth));
     control.setBounds (row);
+}
+
+void layoutLabelledRowWithShare (juce::Label& label,
+                                 juce::Slider& slider,
+                                 juce::Label& shareLabel,
+                                 juce::Rectangle<int> row)
+{
+    shareLabel.setBounds (row.removeFromRight (kShareLabelWidth));
+    row.removeFromRight (4);
+    label.setBounds (row.removeFromLeft (kLabelWidth));
+    slider.setBounds (row);
 }
 
 void layoutRotaryColumn (juce::Label& title,
@@ -154,13 +180,64 @@ AminoAcidPlaybackSettingsComponent::AminoAcidPlaybackSettingsComponent (AminoAci
         applySettingsToPlayer();
     };
 
-    setupLabel (chordsLabel, "Chords");
-    addAndMakeVisible (chordsLabel);
-    addAndMakeVisible (chordsToggle);
-    chordsToggle.setToggleState (false, juce::dontSendNotification);
-    chordsToggle.onClick = [this] { applySettingsToPlayer(); };
+    setupLabel (chordChanceLabel, "Chord mix");
+    addAndMakeVisible (chordChanceLabel);
+    addAndMakeVisible (chordChanceSlider);
+    setupPercentSlider (chordChanceSlider);
+    chordChanceSlider.setValue (0, juce::dontSendNotification);
+    chordChanceSlider.onValueChange = [this]
+    {
+        updateChordControlAppearance();
+        applySettingsToPlayer();
+    };
+
+    chordTypeMixLabel.setText ("Type mix", juce::dontSendNotification);
+    chordTypeMixLabel.setJustificationType (juce::Justification::centredLeft);
+    chordTypeMixLabel.setFont (juce::FontOptions (11.0f));
+    chordTypeMixLabel.setColour (juce::Label::textColourId, juce::Colours::grey);
+    addAndMakeVisible (chordTypeMixLabel);
+
+    for (size_t i = 0; i < chordTypeWeightControls.size(); ++i)
+    {
+        auto& control = chordTypeWeightControls[i];
+        setupLabel (control.label, kChordTypeLabels[i]);
+        addAndMakeVisible (control.label);
+        addAndMakeVisible (control.slider);
+        setupPercentSlider (control.slider);
+        control.slider.setValue (i == 0 ? 100 : 0, juce::dontSendNotification);
+        control.slider.onValueChange = [this]
+        {
+            updateChordTypeShareLabels();
+            applySettingsToPlayer();
+        };
+
+        control.shareLabel.setJustificationType (juce::Justification::centredRight);
+        control.shareLabel.setFont (juce::FontOptions (11.0f));
+        control.shareLabel.setColour (juce::Label::textColourId, juce::Colours::grey);
+        addAndMakeVisible (control.shareLabel);
+    }
+
+    setupLabel (chordStrumLabel, "Strum");
+    addAndMakeVisible (chordStrumLabel);
+    addAndMakeVisible (chordStrumSlider);
+    chordStrumSlider.setSliderStyle (juce::Slider::LinearHorizontal);
+    chordStrumSlider.setTextBoxStyle (juce::Slider::TextBoxRight, false, 44, 20);
+    chordStrumSlider.setRange (0, 200, 1);
+    chordStrumSlider.setValue (0, juce::dontSendNotification);
+    chordStrumSlider.setTextValueSuffix (" ms");
+    chordStrumSlider.onValueChange = [this] { applySettingsToPlayer(); };
+
+    setupLabel (chordVelocityLabel, "Velocity");
+    addAndMakeVisible (chordVelocityLabel);
+    addAndMakeVisible (chordVelocitySlider);
+    chordVelocitySlider.setSliderStyle (juce::Slider::LinearHorizontal);
+    chordVelocitySlider.setTextBoxStyle (juce::Slider::TextBoxRight, false, 44, 20);
+    chordVelocitySlider.setRange (0, 64, 1);
+    chordVelocitySlider.setValue (0, juce::dontSendNotification);
+    chordVelocitySlider.onValueChange = [this] { applySettingsToPlayer(); };
 
     updateDurationControlAppearance();
+    updateChordControlAppearance();
     updateSliderValueLabels();
     applySettingsToPlayer();
 }
@@ -182,8 +259,17 @@ void AminoAcidPlaybackSettingsComponent::resized()
     r.removeFromTop (kDropdownRowBottomMargin);
     clockDivisionSelector.setBounds (r.removeFromTop (kRowHeight).removeFromLeft (kDivisionBoxWidth));
     r.removeFromTop (kDropdownRowBottomMargin);
+
     layoutLabelledRow (sustainLabel, sustainToggle, r.removeFromTop (kRowHeight));
-    layoutLabelledRow (chordsLabel, chordsToggle, r.removeFromTop (kRowHeight));
+    layoutLabelledRow (chordChanceLabel, chordChanceSlider, r.removeFromTop (kRowHeight));
+
+    chordTypeMixLabel.setBounds (r.removeFromTop (kSectionLabelHeight));
+
+    for (auto& control : chordTypeWeightControls)
+        layoutLabelledRowWithShare (control.label, control.slider, control.shareLabel, r.removeFromTop (kRowHeight));
+
+    layoutLabelledRow (chordStrumLabel, chordStrumSlider, r.removeFromTop (kRowHeight));
+    layoutLabelledRow (chordVelocityLabel, chordVelocitySlider, r.removeFromTop (kRowHeight));
 }
 
 void AminoAcidPlaybackSettingsComponent::populateScaleList()
@@ -226,6 +312,58 @@ void AminoAcidPlaybackSettingsComponent::updateDurationControlAppearance()
     noteDurationValueLabel.setAlpha (enabled ? 1.0f : kDisabledAlpha);
 }
 
+void AminoAcidPlaybackSettingsComponent::updateChordControlAppearance()
+{
+    const bool chordsActive = chordChanceSlider.getValue() > 0.0;
+    const float alpha = chordsActive ? 1.0f : kDisabledAlpha;
+
+    chordTypeMixLabel.setAlpha (alpha);
+
+    for (auto& control : chordTypeWeightControls)
+    {
+        control.slider.setEnabled (chordsActive);
+        control.label.setAlpha (alpha);
+        control.shareLabel.setAlpha (alpha);
+    }
+
+    chordStrumSlider.setEnabled (chordsActive);
+    chordStrumLabel.setAlpha (alpha);
+    chordVelocitySlider.setEnabled (chordsActive);
+    chordVelocityLabel.setAlpha (alpha);
+
+    updateChordTypeShareLabels();
+}
+
+void AminoAcidPlaybackSettingsComponent::updateChordTypeShareLabels()
+{
+    int totalWeight = 0;
+
+    for (const auto& control : chordTypeWeightControls)
+        totalWeight += juce::jmax (0, (int) control.slider.getValue());
+
+    const bool showShares = chordChanceSlider.getValue() > 0.0 && totalWeight > 0;
+
+    for (auto& control : chordTypeWeightControls)
+    {
+        if (! showShares)
+        {
+            control.shareLabel.setText ({}, juce::dontSendNotification);
+            continue;
+        }
+
+        const auto weight = juce::jmax (0, (int) control.slider.getValue());
+
+        if (weight <= 0)
+        {
+            control.shareLabel.setText ("(0%)", juce::dontSendNotification);
+            continue;
+        }
+
+        const auto sharePercent = juce::roundToInt (100.0 * (double) weight / (double) totalWeight);
+        control.shareLabel.setText ("(" + juce::String (sharePercent) + "%)", juce::dontSendNotification);
+    }
+}
+
 void AminoAcidPlaybackSettingsComponent::applySettingsToPlayer()
 {
     sequencePlayer.setRootNote ((int) rootNoteSlider.getValue());
@@ -239,5 +377,11 @@ void AminoAcidPlaybackSettingsComponent::applySettingsToPlayer()
     sequencePlayer.setWhiteSpaceReadSpeed ((int) whitespaceSlider.getValue());
     sequencePlayer.setNoteDurationMs ((int) noteDurationSlider.getValue());
     sequencePlayer.setSustainEnabled (sustainToggle.getToggleState());
-    sequencePlayer.setChordsEnabled (chordsToggle.getToggleState());
+    sequencePlayer.setChordChancePercent ((int) chordChanceSlider.getValue());
+    sequencePlayer.setChordStrumMaxMs ((int) chordStrumSlider.getValue());
+    sequencePlayer.setChordVelocityRange ((int) chordVelocitySlider.getValue());
+
+    for (size_t i = 0; i < chordTypeWeightControls.size(); ++i)
+        sequencePlayer.setChordTypeWeight (static_cast<dna::ChordType> (i),
+                                           (int) chordTypeWeightControls[i].slider.getValue());
 }

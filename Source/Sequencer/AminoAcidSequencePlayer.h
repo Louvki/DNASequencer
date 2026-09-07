@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <array>
 #include <cstdint>
 #include <functional>
 #include <vector>
@@ -28,7 +29,10 @@ public:
     void setRootNote (int note) noexcept;
     void setScale (dna::MidiScale scale) noexcept;
     void setNotePoolSize (int size) noexcept;
-    void setChordsEnabled (bool enabled) noexcept;
+    void setChordChancePercent (int percent) noexcept;
+    void setChordTypeWeight (dna::ChordType type, int weight) noexcept;
+    void setChordStrumMaxMs (int maxMs) noexcept;
+    void setChordVelocityRange (int range) noexcept;
     void setWhiteSpaceReadSpeed (int speed) noexcept;
     void setNoteDurationMs (int durationMs) noexcept;
     void setSustainEnabled (bool enabled) noexcept;
@@ -51,7 +55,12 @@ private:
     void checkSequenceReload();
     void advanceWhitespaceMode();
     void advanceCodonMode();
+    std::vector<int> resolvePlaybackNotes (int baseNote);
+    dna::ChordType pickWeightedChordType() const noexcept;
     void playNotes (const std::vector<int>& notes, int velocity);
+    int randomizeChordVelocity (int baseVelocity) const noexcept;
+    void sendNoteOn (int note, int velocity);
+    void scheduleNoteOn (int note, int velocity, int delayMs, bool scheduleOffAfter);
     void scheduleNoteOff (int note);
     void sendNoteOff (int note);
     void timerCallback() override;
@@ -68,7 +77,10 @@ private:
     int rootNote = 60;
     dna::MidiScale scale = dna::MidiScale::majorIonian;
     int notePoolSize = 20;
-    bool chordsEnabled = false;
+    int chordChancePercent = 0;
+    std::array<int, 5> chordTypeWeights { 100, 0, 0, 0, 0 };
+    int chordStrumMaxMs = 0;
+    int chordVelocityRange = 0;
     int whiteSpaceReadSpeed = 15;
     int noteDurationMs = 100;
     bool sustainEnabled = false;
@@ -80,7 +92,17 @@ private:
         std::uint32_t offAtMs = 0;
     };
 
+    struct ScheduledNoteOn
+    {
+        int note = -1;
+        int velocity = 127;
+        std::uint32_t onAtMs = 0;
+        bool scheduleOffAfter = true;
+    };
+
     std::vector<ScheduledNoteOff> scheduledNoteOffs;
+    std::vector<ScheduledNoteOn> scheduledNoteOns;
+    mutable juce::Random strumRandom;
     juce::CriticalSection noteStateLock;
 
     std::atomic<int> currentReadIndex { 0 };

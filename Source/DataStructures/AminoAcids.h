@@ -24,7 +24,6 @@ struct AminoAcid
     std::vector<std::string> codons;
     int codonNoteValue { 0 };
     int codonNoteVelocity { 127 };
-    std::vector<int> codonChordNotes {};
 };
 
 /** MIDI note and velocity assigned to a DNA codon. */
@@ -32,7 +31,6 @@ struct MidiMessage
 {
     int note = 0;
     int velocity = 127;
-    std::vector<int> chordNotes;
 };
 
 /** Returns the canonical table of all 20 amino acids and their codons. */

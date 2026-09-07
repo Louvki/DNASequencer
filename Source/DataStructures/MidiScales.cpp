@@ -119,8 +119,14 @@ std::vector<int> buildScaleNotes (int rootNote, const std::vector<int>& scaleSte
     return notes;
 }
 
-std::vector<int> buildDiatonicTriad (int note, int rootNote, MidiScale scale)
+std::vector<int> buildDiatonicChord (int note, int rootNote, MidiScale scale, ChordType type)
 {
+    static constexpr int maxScaleSteps[] { 4, 6, 8, 10, 12 };
+
+    const auto typeIndex = static_cast<size_t> (type);
+    if (typeIndex >= std::size (maxScaleSteps))
+        return { note };
+
     const auto scaleNotes = buildScaleNotes (rootNote, getScaleSteps (scale));
 
     const auto it = std::find (scaleNotes.begin(), scaleNotes.end(), note);
@@ -128,20 +134,19 @@ std::vector<int> buildDiatonicTriad (int note, int rootNote, MidiScale scale)
         return { note };
 
     const auto index = static_cast<size_t> (std::distance (scaleNotes.begin(), it));
-    std::vector<int> triad;
-    triad.reserve (3);
-    triad.push_back (scaleNotes[index]);
+    std::vector<int> chord;
+    chord.reserve (7);
 
-    if (index + 2 < scaleNotes.size())
-        triad.push_back (scaleNotes[index + 2]);
+    for (int step = 0; step <= maxScaleSteps[typeIndex]; step += 2)
+    {
+        if (index + static_cast<size_t> (step) < scaleNotes.size())
+            chord.push_back (scaleNotes[index + static_cast<size_t> (step)]);
+    }
 
-    if (index + 4 < scaleNotes.size())
-        triad.push_back (scaleNotes[index + 4]);
-
-    return triad;
+    return chord;
 }
 
-std::vector<AminoAcid> applyScaleToAminoAcids (int rootNote, MidiScale scale, int notePoolSize, bool chordsEnabled)
+std::vector<AminoAcid> applyScaleToAminoAcids (int rootNote, MidiScale scale, int notePoolSize)
 {
     auto aminoAcids = getDefaultAminoAcids();
     auto availableNotes = buildScaleNotes (rootNote, getScaleSteps (scale));
@@ -154,15 +159,7 @@ std::vector<AminoAcid> applyScaleToAminoAcids (int rootNote, MidiScale scale, in
         availableNotes.resize ((size_t) limit);
 
     for (size_t i = 0; i < aminoAcids.size(); ++i)
-    {
-        const auto note = availableNotes[i % availableNotes.size()];
-        aminoAcids[i].codonNoteValue = note;
-
-        if (chordsEnabled)
-            aminoAcids[i].codonChordNotes = buildDiatonicTriad (note, rootNote, scale);
-        else
-            aminoAcids[i].codonChordNotes.clear();
-    }
+        aminoAcids[i].codonNoteValue = availableNotes[i % availableNotes.size()];
 
     return aminoAcids;
 }

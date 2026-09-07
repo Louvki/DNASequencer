@@ -39,9 +39,7 @@ void AminoAcids::rebuildCodonMidiPlaybackMap (const std::vector<AminoAcid>& amin
     for (const auto& aminoAcid : aminoAcids)
     {
         for (const auto& codon : aminoAcid.codons)
-            codonMidiPlaybackMap[juce::String (codon)] = { aminoAcid.codonNoteValue,
-                                                           aminoAcid.codonNoteVelocity,
-                                                           aminoAcid.codonChordNotes };
+            codonMidiPlaybackMap[juce::String (codon)] = { aminoAcid.codonNoteValue, aminoAcid.codonNoteVelocity };
     }
 }
 

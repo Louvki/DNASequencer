@@ -25,10 +25,19 @@ enum class MidiScale
     blues
 };
 
+enum class ChordType
+{
+    triad = 0,
+    seventh,
+    ninth,
+    eleventh,
+    thirteenth
+};
+
 juce::String getMidiScaleLabel (MidiScale scale);
 const std::vector<MidiScale>& getAllMidiScales();
 
 std::vector<int> buildScaleNotes (int rootNote, const std::vector<int>& scaleSteps);
-std::vector<int> buildDiatonicTriad (int note, int rootNote, MidiScale scale);
-std::vector<AminoAcid> applyScaleToAminoAcids (int rootNote, MidiScale scale, int notePoolSize, bool chordsEnabled);
+std::vector<int> buildDiatonicChord (int note, int rootNote, MidiScale scale, ChordType type);
+std::vector<AminoAcid> applyScaleToAminoAcids (int rootNote, MidiScale scale, int notePoolSize);
 }
