@@ -9,6 +9,7 @@
 #include <JuceHeader.h>
 
 #include "DataStructures/AminoAcids.h"
+#include "Sequencer/MidiClockDivision.h"
 #include "Sequencer/MidiClockTickListener.h"
 #include "DataStructures/MidiScales.h"
 
@@ -37,6 +38,12 @@ public:
     void setNoteDurationMs (int durationMs) noexcept;
     void setSustainEnabled (bool enabled) noexcept;
 
+    void setLocallyPaused (bool paused) noexcept;
+    bool isLocallyPaused() const noexcept { return locallyPaused.load (std::memory_order_acquire); }
+
+    void setDivision (MidiClockDivision division) noexcept;
+    MidiClockDivision getDivision() const noexcept { return currentDivision; }
+
     void rebuildCodonMap();
     void resetReadPosition();
     void stopActiveNote();
@@ -46,9 +53,10 @@ public:
     bool isReadingCodons() const noexcept { return isReadingCodonsFlag.load (std::memory_order_acquire); }
 
     void onMidiClockTick() override;
-    void onDivisionPulse() override;
 
 private:
+    void resetPulseAccumulator() noexcept;
+    void maybeAdvanceDivisionPulse() noexcept;
     void performFullReset();
     void syncStartMapTrunc();
     void refreshSequenceCache();
@@ -84,6 +92,10 @@ private:
     int whiteSpaceReadSpeed = 15;
     int noteDurationMs = 100;
     bool sustainEnabled = false;
+    std::atomic<bool> locallyPaused { true };
+    MidiClockDivision currentDivision = MidiClockDivision::quarterNote;
+    double ticksPerPulse = getMidiClockTicksPerPulse (MidiClockDivision::quarterNote);
+    double pulseTickAccumulator = 0.0;
     std::vector<int> activeSustainNotes;
 
     struct ScheduledNoteOff

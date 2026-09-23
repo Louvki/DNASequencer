@@ -60,6 +60,52 @@ void AminoAcidSequencePlayer::setSustainEnabled (bool enabled) noexcept
     sustainEnabled = enabled;
 }
 
+void AminoAcidSequencePlayer::setLocallyPaused (bool paused) noexcept
+{
+    locallyPaused.store (paused, std::memory_order_release);
+}
+
+void AminoAcidSequencePlayer::setDivision (MidiClockDivision division) noexcept
+{
+    if (division == currentDivision)
+        return;
+
+    currentDivision = division;
+    ticksPerPulse = getMidiClockTicksPerPulse (division);
+    resetPulseAccumulator();
+}
+
+void AminoAcidSequencePlayer::resetPulseAccumulator() noexcept
+{
+    pulseTickAccumulator = 0.0;
+}
+
+void AminoAcidSequencePlayer::maybeAdvanceDivisionPulse() noexcept
+{
+    pulseTickAccumulator += 1.0;
+
+    if (pulseTickAccumulator < ticksPerPulse)
+        return;
+
+    pulseTickAccumulator -= ticksPerPulse;
+
+    if (midiOutput == nullptr)
+        return;
+
+    if (! isReadingCodonsFlag.load (std::memory_order_acquire))
+        return;
+
+    checkSequenceReload();
+
+    if (! isReadingCodonsFlag.load (std::memory_order_acquire))
+        return;
+
+    if (cachedDna.isEmpty())
+        return;
+
+    advanceCodonMode();
+}
+
 void AminoAcidSequencePlayer::rebuildCodonMap()
 {
     const auto aminoAcidsWithScaleApplied = dna::applyScaleToAminoAcids (rootNote, scale, notePoolSize);
@@ -461,10 +507,10 @@ void AminoAcidSequencePlayer::advanceCodonMode()
 
 void AminoAcidSequencePlayer::onMidiClockTick()
 {
-    if (midiOutput == nullptr)
+    if (locallyPaused.load (std::memory_order_acquire))
         return;
 
-    if (isReadingCodonsFlag.load (std::memory_order_acquire))
+    if (midiOutput == nullptr)
         return;
 
     checkSequenceReload();
@@ -472,24 +518,8 @@ void AminoAcidSequencePlayer::onMidiClockTick()
     if (cachedDna.isEmpty())
         return;
 
-    advanceWhitespaceMode();
-}
-
-void AminoAcidSequencePlayer::onDivisionPulse()
-{
-    if (midiOutput == nullptr)
-        return;
-
     if (! isReadingCodonsFlag.load (std::memory_order_acquire))
-        return;
+        advanceWhitespaceMode();
 
-    checkSequenceReload();
-
-    if (! isReadingCodonsFlag.load (std::memory_order_acquire))
-        return;
-
-    if (cachedDna.isEmpty())
-        return;
-
-    advanceCodonMode();
+    maybeAdvanceDivisionPulse();
 }

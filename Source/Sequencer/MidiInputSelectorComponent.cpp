@@ -1,12 +1,15 @@
 #include "Sequencer/MidiInputSelectorComponent.h"
-#include "ErrorReporting/ErrorLog.h"
 
-MidiInputSelectorComponent::MidiInputSelectorComponent (juce::MidiInputCallback& midiCallbackTarget)
-    : callbackTarget (midiCallbackTarget)
+#include "ErrorReporting/ErrorLog.h"
+#include "Sequencer/MidiClockInputService.h"
+
+MidiInputSelectorComponent::MidiInputSelectorComponent (MidiClockInputService& service)
+    : clockInputService (service)
 {
     midiInputLabel.attachToComponent (&midiInputBox, true);
 
     addAndMakeVisible (midiInputBox);
+    addAndMakeVisible (statusLabel);
 
     midiInputBox.onChange = [this]
     {
@@ -16,11 +19,7 @@ MidiInputSelectorComponent::MidiInputSelectorComponent (juce::MidiInputCallback&
     initialiseMidiInputs();
 }
 
-MidiInputSelectorComponent::~MidiInputSelectorComponent()
-{
-    if (midiInput != nullptr)
-        midiInput->stop();
-}
+MidiInputSelectorComponent::~MidiInputSelectorComponent() = default;
 
 void MidiInputSelectorComponent::resized()
 {
@@ -32,6 +31,24 @@ void MidiInputSelectorComponent::resized()
 void MidiInputSelectorComponent::initialiseMidiInputs()
 {
     populateMidiInputDeviceList();
+
+    const auto selectedIdentifier = clockInputService.getSelectedDeviceIdentifier();
+
+    if (selectedIdentifier.isNotEmpty())
+    {
+        const auto devices = juce::MidiInput::getAvailableDevices();
+
+        for (int i = 0; i < devices.size(); ++i)
+        {
+            if (devices.getReference (i).identifier == selectedIdentifier)
+            {
+                midiInputBox.setSelectedId (i + 1, juce::dontSendNotification);
+                statusLabel.setText ("Clock input: " + devices.getReference (i).name, juce::dontSendNotification);
+                return;
+            }
+        }
+    }
+
     selectFirstMidiInputIfAvailable();
 }
 
@@ -39,9 +56,9 @@ void MidiInputSelectorComponent::populateMidiInputDeviceList()
 {
     midiInputBox.clear (juce::dontSendNotification);
 
-    auto devices = juce::MidiInput::getAvailableDevices();
+    const auto devices = juce::MidiInput::getAvailableDevices();
     for (int i = 0; i < devices.size(); ++i)
-        midiInputBox.addItem (devices[(size_t) i].name, i + 1);
+        midiInputBox.addItem (devices.getReference (i).name, i + 1);
 
     if (devices.isEmpty())
         midiInputBox.addItem ("(no MIDI inputs)", 1);
@@ -51,11 +68,14 @@ void MidiInputSelectorComponent::populateMidiInputDeviceList()
 
 void MidiInputSelectorComponent::selectFirstMidiInputIfAvailable()
 {
-    if (juce::MidiInput::getAvailableDevices().isEmpty())
+    const auto devices = juce::MidiInput::getAvailableDevices();
+
+    if (devices.isEmpty())
         return;
 
-    midiInputBox.setSelectedId (1, juce::dontSendNotification);
-    selectMidiInputDevice (0);
+    const int defaultDeviceIndex = devices.size() >= 2 ? 1 : 0;
+    midiInputBox.setSelectedId (defaultDeviceIndex + 1, juce::dontSendNotification);
+    selectMidiInputDevice (defaultDeviceIndex);
 }
 
 void MidiInputSelectorComponent::midiInputSelectionChanged()
@@ -66,13 +86,7 @@ void MidiInputSelectorComponent::midiInputSelectionChanged()
 
 void MidiInputSelectorComponent::selectMidiInputDevice (int deviceIndex)
 {
-    if (midiInput != nullptr)
-    {
-        midiInput->stop();
-        midiInput.reset();
-    }
-
-    auto devices = juce::MidiInput::getAvailableDevices();
+    const auto devices = juce::MidiInput::getAvailableDevices();
 
     if (deviceIndex < 0 || deviceIndex >= devices.size())
     {
@@ -82,14 +96,12 @@ void MidiInputSelectorComponent::selectMidiInputDevice (int deviceIndex)
         return;
     }
 
-    midiInput = juce::MidiInput::openDevice (devices[(size_t) deviceIndex].identifier, &callbackTarget);
-    if (midiInput == nullptr)
+    if (! clockInputService.selectDevice (deviceIndex))
     {
-        const auto error = juce::String ("Could not open MIDI input.");
-        statusLabel.setText (error, juce::dontSendNotification);
-        ErrorLog::getInstance().addError ("MIDI", error);
+        statusLabel.setText ("Could not open MIDI clock input.", juce::dontSendNotification);
         return;
     }
 
-    midiInput->start();
+    const auto& device = devices.getReference (deviceIndex);
+    statusLabel.setText ("Clock input: " + device.name, juce::dontSendNotification);
 }

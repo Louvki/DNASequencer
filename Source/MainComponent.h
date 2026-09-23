@@ -1,16 +1,18 @@
 #pragma once
 
-#include <memory>
-
 #include <JuceHeader.h>
 
-#include "Sequencer/AminoAcidSequencePlayer.h"
-#include "MainView.h"
+#include "AppMenuBar.h"
+#include "Sequencer/MidiClockInputService.h"
 #include "Sequencer/MidiClockService.h"
+#include "Sequencer/MidiOutputBusPool.h"
+#include "Sequencer/SequencerTabContainer.h"
+#include "Sequencer/TabResourceCoordinator.h"
 
 //==============================================================================
 class MainComponent  : public juce::AudioAppComponent,
-                       public juce::MidiInputCallback
+                       public juce::MidiInputCallback,
+                       private juce::ChangeListener
 {
 public:
     /** Builds the UI, fills the MIDI device list, connects the default port, sizes the window,
@@ -26,23 +28,22 @@ public:
     /** Release hook for audio resources (unused here). */
     void releaseResources() override;
 
-    /** Sizes the embedded `MainView` to fill this component. */
+    /** Sizes the embedded UI to fill this component. */
     void resized() override;
 
     /** Receives MIDI clock and transport commands from the open input device. */
     void handleIncomingMidiMessage (juce::MidiInput* source, const juce::MidiMessage& message) override;
 
 private:
-    void openDefaultMidiOutput();
-    void closeMidiOutput();
-    /** Sends note-off on Stop. */
     void handleTransportSideEffects (const juce::MidiMessage& message);
+    void handleClockInputBusChanged();
+    void changeListenerCallback (juce::ChangeBroadcaster* source) override;
 
     MidiClockService midiClockService;
-    AminoAcidSequencePlayer aminoAcidSequencePlayer;
-    MainView view;
-
-    std::unique_ptr<juce::MidiOutput> midiOutput;
+    TabResourceCoordinator tabResourceCoordinator;
+    MidiOutputBusPool midiOutputBusPool;
+    MidiClockInputService midiClockInputService;
+    SequencerTabContainer tabContainer;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

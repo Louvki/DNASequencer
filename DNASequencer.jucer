@@ -9,9 +9,17 @@
       <FILE id="RsgyaM" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
       <FILE id="uINQwW" name="MainComponent.cpp" compile="1" resource="0"
             file="Source/MainComponent.cpp"/>
+      <FILE id="APPMNH" name="AppMenuBar.h" compile="0" resource="0"
+            file="Source/AppMenuBar.h"/>
+      <FILE id="APPMNC" name="AppMenuBar.cpp" compile="1" resource="0"
+            file="Source/AppMenuBar.cpp"/>
       <FILE id="MvVwH9" name="MainView.h" compile="0" resource="0" file="Source/MainView.h"/>
       <FILE id="MvVwC8" name="MainView.cpp" compile="1" resource="0" file="Source/MainView.cpp"/>
       <GROUP id="SEQCR1" name="Sequencer">
+        <FILE id="MCLKIH" name="MidiClockInputService.h" compile="0" resource="0"
+              file="Source/Sequencer/MidiClockInputService.h"/>
+        <FILE id="MCLKIC" name="MidiClockInputService.cpp" compile="1" resource="0"
+              file="Source/Sequencer/MidiClockInputService.cpp"/>
         <FILE id="MIDSLH" name="MidiInputSelectorComponent.h" compile="0" resource="0"
               file="Source/Sequencer/MidiInputSelectorComponent.h"/>
         <FILE id="MIDSLC" name="MidiInputSelectorComponent.cpp" compile="1" resource="0"
@@ -42,6 +50,26 @@
               file="Source/Sequencer/AminoAcidPlaybackSettingsComponent.h"/>
         <FILE id="AASET2" name="AminoAcidPlaybackSettingsComponent.cpp" compile="1" resource="0"
               file="Source/Sequencer/AminoAcidPlaybackSettingsComponent.cpp"/>
+        <FILE id="MIDOBH" name="MidiOutputBusPool.h" compile="0" resource="0"
+              file="Source/Sequencer/MidiOutputBusPool.h"/>
+        <FILE id="MIDOBC" name="MidiOutputBusPool.cpp" compile="1" resource="0"
+              file="Source/Sequencer/MidiOutputBusPool.cpp"/>
+        <FILE id="MIDSOH" name="MidiOutputSelectorComponent.h" compile="0" resource="0"
+              file="Source/Sequencer/MidiOutputSelectorComponent.h"/>
+        <FILE id="MIDSOC" name="MidiOutputSelectorComponent.cpp" compile="1" resource="0"
+              file="Source/Sequencer/MidiOutputSelectorComponent.cpp"/>
+        <FILE id="TRCOOH" name="TabResourceCoordinator.h" compile="0" resource="0"
+              file="Source/Sequencer/TabResourceCoordinator.h"/>
+        <FILE id="TRCOOC" name="TabResourceCoordinator.cpp" compile="1" resource="0"
+              file="Source/Sequencer/TabResourceCoordinator.cpp"/>
+        <FILE id="SEQSSH" name="SequencerSession.h" compile="0" resource="0"
+              file="Source/Sequencer/SequencerSession.h"/>
+        <FILE id="SEQSSC" name="SequencerSession.cpp" compile="1" resource="0"
+              file="Source/Sequencer/SequencerSession.cpp"/>
+        <FILE id="SEQTBH" name="SequencerTabContainer.h" compile="0" resource="0"
+              file="Source/Sequencer/SequencerTabContainer.h"/>
+        <FILE id="SEQTBC" name="SequencerTabContainer.cpp" compile="1" resource="0"
+              file="Source/Sequencer/SequencerTabContainer.cpp"/>
       </GROUP>
       <GROUP id="DATAST1" name="DataStructures">
         <FILE id="MIDSCA" name="MidiScales.h" compile="0" resource="0"

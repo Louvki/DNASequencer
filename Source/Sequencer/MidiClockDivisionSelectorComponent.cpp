@@ -1,7 +1,7 @@
 #include "Sequencer/MidiClockDivisionSelectorComponent.h"
 
-MidiClockDivisionSelectorComponent::MidiClockDivisionSelectorComponent (MidiClockService& service)
-    : clockService (service)
+MidiClockDivisionSelectorComponent::MidiClockDivisionSelectorComponent (AminoAcidSequencePlayer& player)
+    : sequencePlayer (player)
 {
     addAndMakeVisible (divisionBox);
 
@@ -27,7 +27,7 @@ void MidiClockDivisionSelectorComponent::populateDivisionList()
     }
 
     const auto defaultIndex = divisions.indexOf (MidiClockDivision::quarterNote);
-    const auto selectedIndex = divisions.indexOf (clockService.getDivision());
+    const auto selectedIndex = divisions.indexOf (sequencePlayer.getDivision());
     divisionBox.setSelectedId ((selectedIndex >= 0 ? selectedIndex : defaultIndex) + 1, juce::dontSendNotification);
 }
 
@@ -39,5 +39,5 @@ void MidiClockDivisionSelectorComponent::divisionSelectionChanged()
     if (selectedIndex < 0 || selectedIndex >= divisions.size())
         return;
 
-    clockService.setDivision (divisions.getReference (selectedIndex));
+    sequencePlayer.setDivision (divisions.getReference (selectedIndex));
 }

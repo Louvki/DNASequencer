@@ -1,54 +1,37 @@
 #include "MainComponent.h"
 
+namespace
+{
+constexpr int kWindowWidth = 520;
+constexpr int kWindowHeight = 692;
+} // namespace
+
 //==============================================================================
 MainComponent::MainComponent()
-    : view (*this,
-            midiClockService,
-            aminoAcidSequencePlayer,
-            [this]
-            {
-                midiClockService.setLocalPaused (true);
-                aminoAcidSequencePlayer.resetReadPosition();
-                aminoAcidSequencePlayer.stopActiveNote();
-            })
+    : midiClockInputService (*this),
+      tabContainer (midiClockService, tabResourceCoordinator, midiClockInputService, midiOutputBusPool)
 {
-    addAndMakeVisible (view);
-    setSize (520, 720);
+    AppMenuBar::getInstance().setClockInputService (&midiClockInputService);
+    midiClockInputService.addChangeListener (this);
+    midiClockInputService.selectFirstAvailableDevice();
 
-    aminoAcidSequencePlayer.setDnaSequenceProvider ([this]
-    {
-        return view.getSequenceFileLoader().getLoadedDnaSequence();
-    });
-
-    aminoAcidSequencePlayer.setStartCodonMapProvider ([this]
-    {
-        return view.getSequenceFileLoader().getStartCodonMap();
-    });
-
-    aminoAcidSequencePlayer.setSequenceRevisionProvider ([this]
-    {
-        return view.getSequenceFileLoader().getSequenceRevision();
-    });
-
-    midiClockService.addListener (&aminoAcidSequencePlayer);
-
-    openDefaultMidiOutput();
-    aminoAcidSequencePlayer.setMidiOutput (midiOutput.get());
-    aminoAcidSequencePlayer.resetReadPosition();
+    addAndMakeVisible (tabContainer);
+    setSize (kWindowWidth, kWindowHeight);
     setAudioChannels (0, 0);
 }
 
 MainComponent::~MainComponent()
 {
-    midiClockService.removeListener (&aminoAcidSequencePlayer);
-    aminoAcidSequencePlayer.stopActiveNote();
-    closeMidiOutput();
+    tabContainer.forEachSession ([] (SequencerSession& session)
+    {
+        session.getPlayer().stopActiveNote();
+    });
+
+    midiClockInputService.removeChangeListener (this);
     shutdownAudio();
 }
 
 //==============================================================================
-/* Opens the first MIDI output, registers AminoAcidSequencePlayer as a clock listener, 
-and forwards incoming MIDI: */
 void MainComponent::handleIncomingMidiMessage (juce::MidiInput*, const juce::MidiMessage& message)
 {
     handleTransportSideEffects (message);
@@ -58,23 +41,24 @@ void MainComponent::handleIncomingMidiMessage (juce::MidiInput*, const juce::Mid
 void MainComponent::handleTransportSideEffects (const juce::MidiMessage& message)
 {
     const bool isMidiStop = message.getRawDataSize() >= 1 && message.getRawData()[0] == 0xfc;
-    if (isMidiStop)
-        aminoAcidSequencePlayer.stopActiveNote();
-}
-
-void MainComponent::openDefaultMidiOutput()
-{
-    const auto outputs = juce::MidiOutput::getAvailableDevices();
-
-    if (outputs.isEmpty())
+    if (! isMidiStop)
         return;
 
-    midiOutput = juce::MidiOutput::openDevice (outputs[0].identifier);
+    tabContainer.forEachSession ([] (SequencerSession& session)
+    {
+        session.getPlayer().stopActiveNote();
+    });
 }
 
-void MainComponent::closeMidiOutput()
+void MainComponent::handleClockInputBusChanged()
 {
-    midiOutput.reset();
+    tabContainer.refreshOutputDeviceLists (midiClockInputService.getSelectedDeviceName());
+}
+
+void MainComponent::changeListenerCallback (juce::ChangeBroadcaster* source)
+{
+    if (source == &midiClockInputService)
+        handleClockInputBusChanged();
 }
 
 //==============================================================================
@@ -93,5 +77,5 @@ void MainComponent::releaseResources() {}
 //==============================================================================
 void MainComponent::resized()
 {
-    view.setBounds (getLocalBounds());
+    tabContainer.setBounds (getLocalBounds());
 }

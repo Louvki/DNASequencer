@@ -4,6 +4,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <thread>
 #include <vector>
@@ -12,15 +13,25 @@
 class SequenceFileLoaderComponent : public juce::Component
 {
 public:
+    using CanLoadFileFn = std::function<bool (const juce::File& file)>;
+    using FileLoadedFn = std::function<void (const juce::String& filePath)>;
+
     SequenceFileLoaderComponent();
     ~SequenceFileLoaderComponent() override;
 
+    void setCanLoadFile (CanLoadFileFn predicate);
+    void setOnFileLoaded (FileLoadedFn callback);
+
     void resized() override;
+
+    void cancelLoad();
 
     /** Full cleaned sequence (`chunks.join("")` then uppercased); empty until load finishes. */
     juce::String getLoadedDnaSequence() const;
     /** Global indices where `chunk[i:i+3]` was ATG in the sanitized stream (same semantics as JS). */
     std::vector<std::int64_t> getStartCodonMap() const;
+    /** Absolute path of the loaded file; empty until load finishes. */
+    juce::String getLoadedFilePath() const;
     /** Increments when a new sequence is persisted; used to detect file reloads. */
     std::uint32_t getSequenceRevision() const noexcept { return sequenceRevision_.load (std::memory_order_acquire); }
 
@@ -34,11 +45,16 @@ private:
     void displayErrorInTheUi (juce::String error);
     void updateUiLabels();
 
+    CanLoadFileFn canLoadFile;
+    FileLoadedFn onFileLoaded;
+
     struct FileDropAreaComponent;
     std::unique_ptr<FileDropAreaComponent> fileDropArea;
     juce::Label statusLogLabel;
     juce::String displayedFileShortName_ { "No file selected" };
     juce::String lastError_; // Used for displauying the error in the UI
+    juce::String pendingFilePath_;
+    juce::String loadedFilePath_;
 
     mutable juce::CriticalSection dataLock_; // Guards fields read by getters + `updateUiLabels` from the GUI.
 
@@ -49,7 +65,7 @@ private:
     std::atomic<std::uint32_t> sequenceRevision_ { 0 };
 
     // `isFileLoadInProgress_` is an atomic boolean flag to indicate when a file load is in progress
-    std::atomic<bool> isFileLoadInProgress_ { false }; 
+    std::atomic<bool> isFileLoadInProgress_ { false };
 
     // `isFileLoadCancelRequested_` is an atomic boolean flag that is used to signal cancellation of a file load.
     std::atomic<bool> isFileLoadCancelRequested_ { false };

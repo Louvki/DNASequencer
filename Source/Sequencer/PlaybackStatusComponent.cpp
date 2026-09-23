@@ -33,14 +33,14 @@ PlaybackStatusComponent::PlaybackStatusComponent (MidiClockService& service,
     addAndMakeVisible (playButton);
     playButton.onClick = [this]
     {
-        clockService.setLocalPaused (false);
+        sequencePlayer.setLocallyPaused (false);
         refreshLabels();
     };
 
     addAndMakeVisible (pauseButton);
     pauseButton.onClick = [this]
     {
-        clockService.setLocalPaused (true);
+        sequencePlayer.setLocallyPaused (true);
         sequencePlayer.stopActiveNote();
         refreshLabels();
     };
@@ -101,7 +101,7 @@ void PlaybackStatusComponent::timerCallback()
 
 void PlaybackStatusComponent::refreshLabels()
 {
-    if (clockService.isLocalPaused())
+    if (sequencePlayer.isLocallyPaused())
     {
         ledColour = juce::Colours::grey.darker (0.2f);
         clockStatusLabel.setText ("Paused", juce::dontSendNotification);

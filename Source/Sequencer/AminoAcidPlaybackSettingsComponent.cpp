@@ -89,10 +89,9 @@ void layoutRotaryColumn (juce::Label& title,
 }
 } // namespace
 
-AminoAcidPlaybackSettingsComponent::AminoAcidPlaybackSettingsComponent (AminoAcidSequencePlayer& player,
-                                                                        MidiClockService& clockService)
+AminoAcidPlaybackSettingsComponent::AminoAcidPlaybackSettingsComponent (AminoAcidSequencePlayer& player)
     : sequencePlayer (player),
-      clockDivisionSelector (clockService)
+      clockDivisionSelector (player)
 {
     auto setupLabel = [] (juce::Label& label, const juce::String& text)
     {
@@ -385,3 +384,4 @@ void AminoAcidPlaybackSettingsComponent::applySettingsToPlayer()
         sequencePlayer.setChordTypeWeight (static_cast<dna::ChordType> (i),
                                            (int) chordTypeWeightControls[i].slider.getValue());
 }
+ 

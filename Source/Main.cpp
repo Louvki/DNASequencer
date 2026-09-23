@@ -8,7 +8,7 @@
 
 #include <JuceHeader.h>
 #include "MainComponent.h"
-#include "ErrorReporting/ErrorLog.h"
+#include "AppMenuBar.h"
 
 //==============================================================================
 class DNASequencerApplication  : public juce::JUCEApplication
@@ -27,7 +27,7 @@ public:
         // This method is where you should put your application's initialisation code..
         juce::ignoreUnused (commandLine);
 
-        ErrorLog::getInstance().installForMac();
+        AppMenuBar::getInstance().installForMac();
 
         mainWindow.reset (new MainWindow (getApplicationName()));
     }
@@ -35,7 +35,7 @@ public:
     void shutdown() override
     {
         // Add your application's shutdown code here..
-        ErrorLog::getInstance().uninstallForMac();
+        AppMenuBar::getInstance().uninstallForMac();
 
         mainWindow = nullptr; // (deletes our window)
     }

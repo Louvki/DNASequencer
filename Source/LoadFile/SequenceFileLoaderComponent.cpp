@@ -119,6 +119,21 @@ SequenceFileLoaderComponent::SequenceFileLoaderComponent()
     statusLogLabel.setVisible (false);
 }
 
+void SequenceFileLoaderComponent::setCanLoadFile (CanLoadFileFn predicate)
+{
+    canLoadFile = std::move (predicate);
+}
+
+void SequenceFileLoaderComponent::setOnFileLoaded (FileLoadedFn callback)
+{
+    onFileLoaded = std::move (callback);
+}
+
+void SequenceFileLoaderComponent::cancelLoad()
+{
+    joinLoadThread();
+}
+
 void SequenceFileLoaderComponent::showFileBrowser()
 {
     fileChooserHoldAlive_ = std::make_unique<juce::FileChooser> ("Select DNA/FASTA file", juce::File {}, "*");
@@ -162,6 +177,12 @@ std::vector<std::int64_t> SequenceFileLoaderComponent::getStartCodonMap() const
 {
     const juce::ScopedLock sl (dataLock_);
     return startCodonMap_;
+}
+
+juce::String SequenceFileLoaderComponent::getLoadedFilePath() const
+{
+    const juce::ScopedLock sl (dataLock_);
+    return loadedFilePath_;
 }
 
 void SequenceFileLoaderComponent::handleFileChooserResult (const juce::FileChooser& browser)
@@ -215,7 +236,15 @@ void SequenceFileLoaderComponent::beginLoadFromFile (const juce::File& file)
         return;
     }
 
-    // The braces are to create a lock. This is so the background thread and the UI thread 
+    if (canLoadFile != nullptr && ! canLoadFile (file))
+    {
+        displayErrorInTheUi ("This file is already loaded in another tab.");
+        return;
+    }
+
+    pendingFilePath_ = file.getFullPathName();
+
+    // The braces are to create a lock. This is so the background thread and the UI thread
     // both do not touch lastError at the same time which might cause errors.
     {
         const juce::ScopedLock sl (dataLock_);
@@ -289,14 +318,21 @@ void SequenceFileLoaderComponent::persistLoadedDna (juce::String dnaSequence, st
     // This code runs on the message thread (from callAsync) but updates fields also accessed by the loader worker thread and UI getters.
     // The lock guarantees that updates to loadedDnaSequence_, startCodonMap_, and lastError_ are atomic with respect to any other thread
     // accessing or mutating these fields, preventing inconsistent or partially updated state due to data races.
+    juce::String loadedPath;
+
     {
         const juce::ScopedLock sl (dataLock_);
         loadedDnaSequence_ = std::move (dnaSequence);
         startCodonMap_ = std::move (startCodonMap);
+        loadedFilePath_ = pendingFilePath_;
+        loadedPath = loadedFilePath_;
         lastError_.clear();
     }
 
     sequenceRevision_.fetch_add (1, std::memory_order_release);
+
+    if (onFileLoaded != nullptr)
+        onFileLoaded (loadedPath);
 }
 
 // Failure path queued from worker open errors; keeps label updates coherent with successes.

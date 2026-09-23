@@ -6,13 +6,11 @@
 
 #include "Sequencer/AminoAcidSequencePlayer.h"
 #include "Sequencer/MidiClockDivisionSelectorComponent.h"
-#include "Sequencer/MidiClockService.h"
 
 class AminoAcidPlaybackSettingsComponent : public juce::Component
 {
 public:
-    AminoAcidPlaybackSettingsComponent (AminoAcidSequencePlayer& player,
-                                        MidiClockService& clockService);
+    AminoAcidPlaybackSettingsComponent (AminoAcidSequencePlayer& player);
 
     void resized() override;
 

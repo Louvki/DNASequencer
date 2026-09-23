@@ -2,13 +2,13 @@
 
 #include <JuceHeader.h>
 
-#include <memory>
+class MidiClockInputService;
 
-/** Owns MIDI input device selection UI + open/close logic. */
+/** Clock input bus dropdown UI; device open/close is owned by MidiClockInputService. */
 class MidiInputSelectorComponent : public juce::Component
 {
 public:
-    explicit MidiInputSelectorComponent (juce::MidiInputCallback& midiCallbackTarget);
+    explicit MidiInputSelectorComponent (MidiClockInputService& clockInputService);
     ~MidiInputSelectorComponent() override;
 
     void resized() override;
@@ -20,11 +20,10 @@ private:
     void midiInputSelectionChanged();
     void selectMidiInputDevice (int deviceIndex);
 
-    juce::MidiInputCallback& callbackTarget;
-    std::unique_ptr<juce::MidiInput> midiInput;
+    MidiClockInputService& clockInputService;
 
     juce::ComboBox midiInputBox;
-    juce::Label midiInputLabel { {}, "MIDI Input" };
+    juce::Label midiInputLabel { {}, "Clock Input Bus" };
     juce::Label statusLabel;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MidiInputSelectorComponent)
